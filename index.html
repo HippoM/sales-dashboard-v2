@@ -242,8 +242,8 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
 <script>
 // ── CONFIG ────────────────────────────────────────────────────
 // Dien truc tiep o day hoac qua UI
-const SUPABASE_URL = "https://qcilaybuoqpucrllnair.supabase.co";
-const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFjaWxheWJ1b3FwdWNybGxuYWlyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY2Njc5MTQsImV4cCI6MjA5MjI0MzkxNH0._YzE49wTTzsflGUFyJWKqhDfLGgILYLXv6HxEcgHcHk";
+const SUPABASE_URL = "https://dvbxrozfhtcixdiqlstq.supabase.co";
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR2Ynhyb3pmaHRjaXhkaXFsc3RxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk3ODM1MzUsImV4cCI6MjA5NTM1OTUzNX0.7JJ7I1Mrscj1vksYaoxtptM-C6xdC_06OxwtQb00yt0";
 
 // ── STATE ─────────────────────────────────────────────────────
 let allData = [], filteredData = [];
@@ -501,17 +501,31 @@ function renderDayTable() {
 }
 
 function groupBySKU(data) {
-  // FIX: key = sku + "|" + platform
-  // Cu: dung sku lam key -> cung 1 SKU ban tren nhieu san bi gop chung,
-  //     qty cong het vao san dau tien gap -> so lieu sai khi chon tat ca san
+  // Neu chon 1 san: group by SKU x Platform (tach rieng tung san)
+  // Neu chon nhieu san: group by SKU only (cong tong, hien ten san gop lai)
+  const multiPlatform = activePlatforms.size > 1;
   const map={};
   data.forEach(r=>{
-    const k=r.sku+'|'+r.platform;
-    if(!map[k]) map[k]={sku:r.sku,product:r.product,platform:r.platform,qty:0,revenue:0,cogs:0,profit:0};
+    const k = multiPlatform ? r.sku : r.sku+'|'+r.platform;
+    if(!map[k]){
+      map[k]={
+        sku:r.sku, product:r.product,
+        platform: multiPlatform ? '' : r.platform,
+        platforms: new Set(),
+        qty:0, revenue:0, cogs:0, profit:0
+      };
+    }
+    map[k].platforms.add(r.platform);
     map[k].qty+=r.qty; map[k].revenue+=r.revenue;
     map[k].cogs+=r.cogs; map[k].profit+=r.revenue-r.cogs;
   });
-  return Object.values(map).map(s=>({...s,gm:s.revenue>0?s.profit/s.revenue:0}));
+  return Object.values(map).map(s=>{
+    // Hien ten san: neu nhieu san thi gop lai
+    const platformLabel = multiPlatform
+      ? (s.platforms.size === activePlatforms.size ? 'Tất cả' : [...s.platforms].join(' + '))
+      : s.platform;
+    return {...s, platform: platformLabel, gm: s.revenue>0?s.profit/s.revenue:0};
+  });
 }
 
 function renderSKUChart() {
@@ -533,8 +547,17 @@ function renderSKUChart() {
 
 function renderSKUTable() {
   let skus=groupBySKU(filteredData);
-  const q=(document.getElementById('skuSearch').value||'').toLowerCase();
-  if(q) skus=skus.filter(s=>s.sku.toLowerCase().includes(q)||s.product.toLowerCase().includes(q));
+  const q=(document.getElementById('skuSearch').value||'').toLowerCase().trim();
+  if(q) {
+    // Neu query khop chinh xac voi 1 SKU -> exact match
+    // Neu khong -> partial match (contains)
+    const exactMatch = skus.some(s=>s.sku.toLowerCase()===q);
+    if(exactMatch) {
+      skus=skus.filter(s=>s.sku.toLowerCase()===q);
+    } else {
+      skus=skus.filter(s=>s.sku.toLowerCase().includes(q)||s.product.toLowerCase().includes(q));
+    }
+  }
   const {key,dir}=sortState.sku;
   skus.sort((a,b)=>{const av=a[key],bv=b[key];return dir*(typeof av==='string'?av.localeCompare(bv):bv-av);});
   document.querySelector('#skuTable tbody').innerHTML=skus.map(s=>`<tr>
