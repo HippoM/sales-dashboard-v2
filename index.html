@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Sales Dashboard — GM Tracker</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -47,7 +48,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .platform-chip.t2c.active{background:#378ADD}
 .platform-chip.k2c.active{background:#1D9E75}
 .platform-chip.ttk.active{background:#534AB7}
-.platform-chip.si.active{background:#ea580c}
 .platform-chip .dot{width:7px;height:7px;border-radius:50%;background:currentColor}
 .btn{padding:8px 16px;border-radius:var(--radius-sm);font-size:13px;cursor:pointer;border:0.5px solid var(--border2);background:var(--surface);color:var(--text);font-family:inherit;display:inline-flex;align-items:center;gap:6px}
 .btn:hover{background:var(--surface2)}
@@ -145,7 +145,6 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
       <div class="platform-chip t2c active" onclick="togglePlatform('T2C Mall',this)"><span class="dot"></span> Shopee T2C</div>
       <div class="platform-chip k2c active" onclick="togglePlatform('K2C Mall',this)"><span class="dot"></span> Shopee K2C</div>
       <div class="platform-chip ttk active" onclick="togglePlatform('TikTok',this)"><span class="dot"></span> TikTok Shop</div>
-      <div class="platform-chip si active" onclick="togglePlatform('Sỉ',this)"><span class="dot"></span> Sỉ</div>
     </div>
   </div>
 </div>
@@ -218,7 +217,8 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
           <span class="search-icon">⌕</span>
           <input type="text" id="skuSearch" placeholder="Tìm SKU..." oninput="renderSKUTable()">
         </div>
-        <button class="btn" onclick="exportCSV('sku')">↓ Export CSV</button>
+        <button class="btn" onclick="exportTongHop()">↓ Export Tổng hợp</button>
+        <button class="btn" onclick="exportCSV('sku')">↓ Export Chi tiết</button>
       </div>
     </div>
     <div class="tbl-wrap">
@@ -251,7 +251,7 @@ const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 let allData = [], filteredData = [];
 let gmChart, revChart, skuChart;
 let sortState = {day:{key:'date',dir:-1}, sku:{key:'revenue',dir:-1}};
-let activePlatforms = new Set(['T2C Mall','K2C Mall','TikTok','Sỉ']);
+let activePlatforms = new Set(['T2C Mall','K2C Mall','TikTok']);
 let configVisible = true;
 const PAGE_SIZE = 50000; // load toi da 50k rows moi lan
 
@@ -587,6 +587,41 @@ function sortTable(tbl,key) {
   if(tbl==='day') renderDayTable(); else renderSKUTable();
 }
 
+function exportTongHop() {
+  // Sheet 1: SKU | SL Shopee (T2C+K2C) | SL Si | SL TikTok
+  // Sheet 2: SKU | SL T2C | SL K2C | SL Si | SL TikTok (chi tiet)
+  const bySkuFiltered={};
+  filteredData.forEach(r=>{
+    if(!bySkuFiltered[r.sku]) bySkuFiltered[r.sku]={
+      sku:r.sku, product:r.product,
+      t2c:0, k2c:0, tiktok:0, si:0
+    };
+    if(r.platform==='T2C Mall') bySkuFiltered[r.sku].t2c+=r.qty;
+    if(r.platform==='K2C Mall') bySkuFiltered[r.sku].k2c+=r.qty;
+    if(r.platform==='TikTok')   bySkuFiltered[r.sku].tiktok+=r.qty;
+    if(r.platform==='Sỉ')       bySkuFiltered[r.sku].si+=r.qty;
+  });
+
+  const sorted = Object.values(bySkuFiltered).sort((a,b)=>(b.t2c+b.k2c+b.tiktok+b.si)-(a.t2c+a.k2c+a.tiktok+a.si));
+
+  // Sheet 1: Tong hop
+  const sheet1Data = [
+    ['SKU', 'Tên SP', 'SL Shopee (T2C+K2C)', 'SL Sỉ', 'SL TikTok', 'Tổng SL'],
+    ...sorted.map(s=>[s.sku, s.product, s.t2c+s.k2c, s.si, s.tiktok, s.t2c+s.k2c+s.si+s.tiktok])
+  ];
+
+  // Sheet 2: Chi tiet
+  const sheet2Data = [
+    ['SKU', 'Tên SP', 'SL T2C Mall', 'SL K2C Mall', 'SL Shopee (T2C+K2C)', 'SL Sỉ', 'SL TikTok', 'Tổng SL'],
+    ...sorted.map(s=>[s.sku, s.product, s.t2c, s.k2c, s.t2c+s.k2c, s.si, s.tiktok, s.t2c+s.k2c+s.si+s.tiktok])
+  ];
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(sheet1Data), 'Tổng hợp');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(sheet2Data), 'Chi tiết theo sàn');
+  XLSX.writeFile(wb, `SL_ban_${new Date().toISOString().slice(0,10)}.xlsx`);
+}
+
 function exportCSV(type) {
   let headers,rows;
   if(type==='day'){
@@ -594,30 +629,9 @@ function exportCSV(type) {
     rows=groupByDay(filteredData).map(d=>{const gm=d.revenue>0?d.profit/d.revenue:0;
       return[d.date,d.platform,d.revenue,d.cogs,d.profit,(gm*100).toFixed(2)+'%',d.orders];});
   } else {
-    // Export: luon xuat ca 3 san theo khoang thoi gian dang chon
-    const bySkuFiltered={};
-    filteredData.forEach(r=>{
-      if(!bySkuFiltered[r.sku]) bySkuFiltered[r.sku]={
-        sku:r.sku, product:r.product,
-        t2c:0, k2c:0, tiktok:0, si:0,
-        revenue:0, cogs:0, profit:0
-      };
-      if(r.platform==='T2C Mall') bySkuFiltered[r.sku].t2c+=r.qty;
-      if(r.platform==='K2C Mall') bySkuFiltered[r.sku].k2c+=r.qty;
-      if(r.platform==='TikTok')   bySkuFiltered[r.sku].tiktok+=r.qty;
-      if(r.platform==='Sỉ')       bySkuFiltered[r.sku].si+=r.qty;
-      bySkuFiltered[r.sku].revenue+=r.revenue;
-      bySkuFiltered[r.sku].cogs+=r.cogs;
-      bySkuFiltered[r.sku].profit+=r.revenue-r.cogs;
-    });
-    headers=['SKU','Tên SP','SL Shopee T2C','SL Shopee K2C','SL Shopee (T2C+K2C)','SL TikTok','SL Sỉ','Tổng SL','Doanh thu','Giá vốn','Lợi nhuận','GM%'];
-    rows=Object.values(bySkuFiltered).sort((a,b)=>b.revenue-a.revenue).map(s=>{
-      const shopee=s.t2c+s.k2c;
-      const total=shopee+s.tiktok+s.si;
-      const gm=s.revenue>0?s.profit/s.revenue:0;
-      return[s.sku,s.product,s.t2c,s.k2c,shopee,s.tiktok,s.si,total,
-        s.revenue,s.cogs,s.profit,(gm*100).toFixed(2)+'%'];
-    });
+    headers=['SKU','Tên','Sàn','SL','Doanh thu','Giá vốn','Lợi nhuận','GM%'];
+    rows=groupBySKU(filteredData).sort((a,b)=>b.revenue-a.revenue).map(s=>
+      [s.sku,s.product,s.platform,s.qty,s.revenue,s.cogs,s.profit,(s.gm*100).toFixed(2)+'%']);
   }
   const csv=[headers,...rows].map(r=>r.map(c=>`"${c}"`).join(',')).join('\n');
   const a=document.createElement('a');
@@ -637,6 +651,9 @@ function setStatus(msg,type='') {
 }
 
 loadConfig();
+// Reset activePlatforms ve du 4 san (tranh localStorage cu thieu San)
+activePlatforms = new Set(['T2C Mall','K2C Mall','TikTok','Sỉ']);
+document.querySelectorAll('.platform-chip').forEach(el=>el.classList.add('active'));
 if (sbUrl() && sbKey()) loadData();
 else setStatus('Nhập Supabase URL và Key để bắt đầu');
 </script>
