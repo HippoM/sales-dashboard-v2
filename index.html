@@ -318,7 +318,7 @@ async function fetchMonth(ym) {
   const [y, m] = ym.split('-').map(Number);
   const dateFrom = `${ym}-01`;
   const dateTo   = m === 12 ? `${y+1}-01-01` : `${y}-${String(m+1).padStart(2,'0')}-01`;
-  const BATCH = 1000;
+  const BATCH = 5000;
   let offset = 0, rows = [], hasMore = true;
   while (hasMore) {
     const url = `${sbUrl()}/rest/v1/orders?select=order_id,order_date,platform,sku,product_name,qty,revenue,cogs,gross_profit,gm_pct,status&order=order_date.asc&order_date=gte.${dateFrom}&order_date=lt.${dateTo}`;
