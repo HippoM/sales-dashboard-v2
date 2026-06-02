@@ -389,12 +389,12 @@ async function loadData() {
       if (ym !== currentYM && cache[ym]) {
         // Thang qua khu da cache -> dung lai, khong fetch
         document.getElementById('loadingMsg').textContent =
-          `Cache: ${ym} (${cache[ym].length.toLocaleString()} đơn)`;
+          `Tháng ${ym} (cache)`;
         allRows = allRows.concat(cache[ym]);
       } else {
         // Thang hien tai hoac chua cache -> fetch moi
         document.getElementById('loadingMsg').textContent =
-          `Đang tải ${ym}...`;
+          `Đang tải tháng ${ym}...`;
         const rows = await fetchMonth(ym);
         if (ym !== currentYM) setCachedMonth(ym, rows); // Chi cache thang qua khu
         allRows = allRows.concat(rows);
