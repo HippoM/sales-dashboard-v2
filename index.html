@@ -291,6 +291,66 @@ function toggleConfig() {
 }
 
 // ── LOAD DATA ─────────────────────────────────────────────────
+// Cache cac thang da qua vao sessionStorage (giu trong tab hien tai)
+// Thang hien tai luon fetch moi, thang cu chi fetch 1 lan roi cache lai
+const CACHE_KEY = 'dash_month_cache_v1';
+
+function getCurrentYearMonth() {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+}
+
+function getCachedMonths() {
+  try { return JSON.parse(sessionStorage.getItem(CACHE_KEY) || '{}'); }
+  catch { return {}; }
+}
+
+function setCachedMonth(ym, rows) {
+  try {
+    const cache = getCachedMonths();
+    cache[ym] = rows;
+    sessionStorage.setItem(CACHE_KEY, JSON.stringify(cache));
+  } catch(e) { console.warn('Cache full:', e); }
+}
+
+async function fetchMonth(ym) {
+  // Fetch tat ca don trong thang ym (YYYY-MM)
+  const [y, m] = ym.split('-').map(Number);
+  const dateFrom = `${ym}-01`;
+  const dateTo   = m === 12 ? `${y+1}-01-01` : `${y}-${String(m+1).padStart(2,'0')}-01`;
+  const BATCH = 1000;
+  let offset = 0, rows = [], hasMore = true;
+  while (hasMore) {
+    const url = `${sbUrl()}/rest/v1/orders?select=order_id,order_date,platform,sku,product_name,qty,revenue,cogs,gross_profit,gm_pct,status&order=order_date.asc&order_date=gte.${dateFrom}&order_date=lt.${dateTo}`;
+    const res = await fetch(url, {
+      headers: { 'apikey': sbKey(), 'Authorization': `Bearer ${sbKey()}`,
+        'Range': `${offset}-${offset+BATCH-1}`, 'Prefer': 'count=none' }
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const batch = await res.json();
+    rows = rows.concat(batch);
+    if (batch.length < BATCH) hasMore = false;
+    else offset += BATCH;
+  }
+  return rows;
+}
+
+function parseRows(rows) {
+  return rows.map(r => ({
+    order_id:   r.order_id,
+    order_date: r.order_date ? new Date(r.order_date + 'T00:00:00') : null,
+    platform:   r.platform     || '',
+    sku:        r.sku          || '',
+    product:    r.product_name || '',
+    qty:        +r.qty         || 0,
+    revenue:    +r.revenue     || 0,
+    cogs:       +r.cogs        || 0,
+    profit:     +r.gross_profit|| 0,
+    gm:         +r.gm_pct      || 0,
+    status:     r.status       || '',
+  })).filter(r => r.order_date);
+}
+
 async function loadData() {
   if (!sbUrl() || !sbKey()) { setStatus('⚠️ Nhập Supabase URL và Key', 'error'); return; }
 
@@ -300,52 +360,48 @@ async function loadData() {
   document.getElementById('loadingEl').style.display = 'flex';
 
   try {
-    document.getElementById('loadingMsg').textContent = 'Đang tải dữ liệu từ Supabase...';
+    const currentYM = getCurrentYearMonth();
+    const cache = getCachedMonths();
 
-    // Phan trang: load tung batch 1000 cho den khi het
-    const BATCH = 1000;
-    let offset  = 0;
+    // Tim tat ca cac thang can load (tu Supabase)
+    // Lay danh sach thang distinct tu Supabase
+    document.getElementById('loadingMsg').textContent = 'Đang kiểm tra dữ liệu...';
+    const monthRes = await fetch(
+      `${sbUrl()}/rest/v1/orders?select=order_date&order=order_date.asc&limit=1`,
+      { headers: { 'apikey': sbKey(), 'Authorization': `Bearer ${sbKey()}`, 'Prefer': 'count=none' } }
+    );
+    const firstRow = await monthRes.json();
+    if (!firstRow.length) throw new Error('Không có dữ liệu');
+
+    // Sinh danh sach thang tu thang dau tien den thang hien tai
+    const firstDate = new Date(firstRow[0].order_date);
+    const months = [];
+    let cur = new Date(firstDate.getFullYear(), firstDate.getMonth(), 1);
+    const now = new Date();
+    while (cur <= now) {
+      const ym = `${cur.getFullYear()}-${String(cur.getMonth()+1).padStart(2,'0')}`;
+      months.push(ym);
+      cur.setMonth(cur.getMonth() + 1);
+    }
+
     let allRows = [];
-    let hasMore = true;
-
-    while (hasMore) {
-      document.getElementById('loadingMsg').textContent =
-        `Đang tải... ${allRows.length.toLocaleString()} đơn`;
-
-      const url    = `${sbUrl()}/rest/v1/orders?select=order_id,order_date,platform,sku,product_name,qty,revenue,cogs,gross_profit,gm_pct,status&order=order_date.desc`;
-      const res    = await fetch(url, {
-        headers: {
-          'apikey':        sbKey(),
-          'Authorization': `Bearer ${sbKey()}`,
-          'Range':         `${offset}-${offset + BATCH - 1}`,
-          'Prefer':        'count=none',
-        }
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}: ${await res.text()}`);
-      const batch = await res.json();
-      allRows = allRows.concat(batch);
-
-      if (batch.length < BATCH) {
-        hasMore = false;  // het data
+    for (const ym of months) {
+      if (ym !== currentYM && cache[ym]) {
+        // Thang qua khu da cache -> dung lai, khong fetch
+        document.getElementById('loadingMsg').textContent =
+          `Cache: ${ym} (${cache[ym].length.toLocaleString()} đơn)`;
+        allRows = allRows.concat(cache[ym]);
       } else {
-        offset += BATCH;
+        // Thang hien tai hoac chua cache -> fetch moi
+        document.getElementById('loadingMsg').textContent =
+          `Đang tải ${ym}...`;
+        const rows = await fetchMonth(ym);
+        if (ym !== currentYM) setCachedMonth(ym, rows); // Chi cache thang qua khu
+        allRows = allRows.concat(rows);
       }
     }
 
-    allData = allRows.map(r => ({
-      order_id:   r.order_id,
-      order_date: r.order_date ? new Date(r.order_date + 'T00:00:00') : null,
-      platform:   r.platform     || '',
-      sku:        r.sku          || '',
-      product:    r.product_name || '',
-      qty:        +r.qty         || 0,
-      revenue:    +r.revenue     || 0,
-      cogs:       +r.cogs        || 0,
-      profit:     +r.gross_profit|| 0,
-      gm:         +r.gm_pct      || 0,
-      status:     r.status       || '',
-    })).filter(r => r.order_date);
-
+    allData = parseRows(allRows);
     setDateRange();
     applyFilters();
     setStatus(`✅ ${new Date().toLocaleTimeString('vi-VN')} — ${allData.length.toLocaleString()} đơn`, 'success');
