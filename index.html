@@ -291,7 +291,7 @@ function toggleConfig() {
 }
 
 // ── LOAD DATA ─────────────────────────────────────────────────
-// Cache cac thang da qua vao sessionStorage (giu trong tab hien tai)
+// Cache cac thang da qua vao localStorage (giu giua cac lan refresh)
 // Thang hien tai luon fetch moi, thang cu chi fetch 1 lan roi cache lai
 const CACHE_KEY = 'dash_month_cache_v1';
 
@@ -301,7 +301,7 @@ function getCurrentYearMonth() {
 }
 
 function getCachedMonths() {
-  try { return JSON.parse(sessionStorage.getItem(CACHE_KEY) || '{}'); }
+  try { return JSON.parse(localStorage.getItem(CACHE_KEY) || '{}'); }
   catch { return {}; }
 }
 
@@ -309,7 +309,7 @@ function setCachedMonth(ym, rows) {
   try {
     const cache = getCachedMonths();
     cache[ym] = rows;
-    sessionStorage.setItem(CACHE_KEY, JSON.stringify(cache));
+    localStorage.setItem(CACHE_KEY, JSON.stringify(cache));
   } catch(e) { console.warn('Cache full:', e); }
 }
 
