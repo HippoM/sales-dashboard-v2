@@ -464,8 +464,8 @@ function togglePlatform(name, el) {
 }
 
 function applyFilters() {
-  const from = new Date(document.getElementById('dateFrom').value);
-  const to   = new Date(document.getElementById('dateTo').value); to.setHours(23,59,59);
+  const from = new Date(document.getElementById('dateFrom').value + 'T00:00:00');
+  const to   = new Date(document.getElementById('dateTo').value + 'T23:59:59');
   filteredData = allData.filter(r =>
     r.order_date >= from && r.order_date <= to && activePlatforms.has(r.platform)
   );
