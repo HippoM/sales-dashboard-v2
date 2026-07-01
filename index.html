@@ -150,6 +150,13 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
       <div class="platform-chip si active" onclick="togglePlatform('Sỉ',this)"><span class="dot"></span> Sỉ</div>
     </div>
   </div>
+  <div class="filter-group">
+    <label>Cách tính giá vốn</label>
+    <div class="quick-btns">
+      <button class="quick-btn cost-toggle-btn" data-rule="with_gift" onclick="setCostRule('with_gift')">Gộp quà</button>
+      <button class="quick-btn cost-toggle-btn" data-rule="no_gift" onclick="setCostRule('no_gift')">Không gộp quà</button>
+    </div>
+  </div>
 </div>
 
 <!-- Metrics -->
@@ -256,6 +263,8 @@ let gmChart, revChart, skuChart;
 let sortState = {day:{key:'date',dir:-1}, sku:{key:'revenue',dir:-1}};
 let activePlatforms = new Set(['T2C Mall','K2C Mall','TikTok','Sỉ']);
 let configVisible = true;
+// Rule tinh gia von: 'with_gift' (mac dinh) hoac 'no_gift'
+let costRule = localStorage.getItem('cost_rule') || 'with_gift';
 const PAGE_SIZE = 50000; // load toi da 50k rows moi lan
 
 // ── SUPABASE CLIENT (khong can SDK) ───────────────────────────
@@ -321,7 +330,7 @@ async function fetchMonth(ym) {
   const BATCH = 1000;  // Supabase gioi han 1000 rows/request
   let offset = 0, rows = [], hasMore = true;
   while (hasMore) {
-    const url = `${sbUrl()}/rest/v1/orders?select=order_id,order_date,platform,sku,product_name,qty,revenue,cogs,gross_profit,gm_pct,status&order=order_date.asc,id.asc&order_date=gte.${dateFrom}&order_date=lt.${dateTo}&offset=${offset}&limit=${BATCH}`;
+    const url = `${sbUrl()}/rest/v1/orders?select=order_id,order_date,platform,sku,product_name,qty,revenue,cogs,gross_profit,gm_pct,cogs_with_gift,gross_profit_with_gift,gm_pct_with_gift,status&order=order_date.asc,id.asc&order_date=gte.${dateFrom}&order_date=lt.${dateTo}&offset=${offset}&limit=${BATCH}`;
     const res = await fetch(url, {
       headers: { 'apikey': sbKey(), 'Authorization': `Bearer ${sbKey()}`,
         'Prefer': 'count=none' }
@@ -336,19 +345,44 @@ async function fetchMonth(ym) {
 }
 
 function parseRows(rows) {
-  return rows.map(r => ({
-    order_id:   r.order_id,
-    order_date: r.order_date ? new Date(r.order_date + 'T00:00:00') : null,
-    platform:   r.platform     || '',
-    sku:        r.sku          || '',
-    product:    r.product_name || '',
-    qty:        +r.qty         || 0,
-    revenue:    +r.revenue     || 0,
-    cogs:       +r.cogs        || 0,
-    profit:     +r.gross_profit|| 0,
-    gm:         +r.gm_pct      || 0,
-    status:     r.status       || '',
-  })).filter(r => r.order_date);
+  return rows.map(r => {
+    const cogs_ng   = +r.cogs         || 0;
+    const profit_ng = +r.gross_profit || 0;
+    const gm_ng     = +r.gm_pct       || 0;
+    // Neu chua co du lieu with_gift (thang cu chua re-process) -> fallback = no_gift
+    const cogs_wg   = r.cogs_with_gift          != null ? +r.cogs_with_gift          : cogs_ng;
+    const profit_wg = r.gross_profit_with_gift  != null ? +r.gross_profit_with_gift  : profit_ng;
+    const gm_wg      = r.gm_pct_with_gift       != null ? +r.gm_pct_with_gift        : gm_ng;
+    return {
+      order_id:   r.order_id,
+      order_date: r.order_date ? new Date(r.order_date + 'T00:00:00') : null,
+      platform:   r.platform     || '',
+      sku:        r.sku          || '',
+      product:    r.product_name || '',
+      qty:        +r.qty         || 0,
+      revenue:    +r.revenue     || 0,
+      cogs_ng, profit_ng, gm_ng,
+      cogs_wg, profit_wg, gm_wg,
+      cogs:       costRule==='with_gift' ? cogs_wg   : cogs_ng,
+      profit:     costRule==='with_gift' ? profit_wg : profit_ng,
+      gm:         costRule==='with_gift' ? gm_wg      : gm_ng,
+      status:     r.status       || '',
+    };
+  }).filter(r => r.order_date);
+}
+
+function setCostRule(rule) {
+  costRule = rule;
+  localStorage.setItem('cost_rule', rule);
+  allData.forEach(r => {
+    r.cogs   = rule==='with_gift' ? r.cogs_wg   : r.cogs_ng;
+    r.profit = rule==='with_gift' ? r.profit_wg : r.profit_ng;
+    r.gm     = rule==='with_gift' ? r.gm_wg      : r.gm_ng;
+  });
+  document.querySelectorAll('.cost-toggle-btn').forEach(b =>
+    b.classList.toggle('active', b.dataset.rule === rule)
+  );
+  applyFilters();
 }
 
 async function loadData() {
@@ -498,6 +532,20 @@ function groupByDay(data) {
     if(!map[k]) map[k]={date:k,platform:r.platform,revenue:0,cogs:0,profit:0,orders:0};
     map[k].revenue+=r.revenue; map[k].cogs+=r.cogs;
     map[k].profit+=r.revenue-r.cogs; map[k].orders++;
+  });
+  return Object.values(map).sort((a,b)=>a.date.localeCompare(b.date));
+}
+
+// Giong groupByDay nhung tinh song song ca 2 rule (dung cho Export, khong phu thuoc toggle)
+function groupByDayBoth(data) {
+  const map={};
+  data.forEach(r=>{
+    const k=dateStr(r.order_date);
+    if(!map[k]) map[k]={date:k,platform:r.platform,revenue:0,cogs_ng:0,profit_ng:0,cogs_wg:0,profit_wg:0,orders:0};
+    map[k].revenue+=r.revenue;
+    map[k].cogs_ng+=r.cogs_ng; map[k].profit_ng+=r.revenue-r.cogs_ng;
+    map[k].cogs_wg+=r.cogs_wg; map[k].profit_wg+=r.revenue-r.cogs_wg;
+    map[k].orders++;
   });
   return Object.values(map).sort((a,b)=>a.date.localeCompare(b.date));
 }
@@ -711,27 +759,40 @@ function exportTongHop() {
 function exportCSV(type) {
   let headers,rows;
   if(type==='day'){
-    headers=['Ngày','Sàn','Doanh thu','Giá vốn','Lợi nhuận','GM%','Số đơn'];
-    rows=groupByDay(filteredData).map(d=>{const gm=d.revenue>0?d.profit/d.revenue:0;
-      return[d.date,d.platform,d.revenue,d.cogs,d.profit,(gm*100).toFixed(2)+'%',d.orders];});
+    headers=['Ngày','Sàn','Doanh thu',
+      'Giá vốn (Không gộp quà)','Lợi nhuận (Không gộp quà)','GM% (Không gộp quà)',
+      'Giá vốn (Gộp quà)','Lợi nhuận (Gộp quà)','GM% (Gộp quà)','Số đơn'];
+    rows=groupByDayBoth(filteredData).map(d=>{
+      const gmNg=d.revenue>0?d.profit_ng/d.revenue:0;
+      const gmWg=d.revenue>0?d.profit_wg/d.revenue:0;
+      return[d.date,d.platform,d.revenue,
+        d.cogs_ng,d.profit_ng,(gmNg*100).toFixed(2)+'%',
+        d.cogs_wg,d.profit_wg,(gmWg*100).toFixed(2)+'%',
+        d.orders];
+    });
   } else {
     const bySkuFiltered={};
     filteredData.forEach(r=>{
-      if(!bySkuFiltered[r.sku]) bySkuFiltered[r.sku]={sku:r.sku,product:r.product,t2c:0,k2c:0,tiktok:0,si:0,revenue:0,cogs:0,profit:0};
+      if(!bySkuFiltered[r.sku]) bySkuFiltered[r.sku]={sku:r.sku,product:r.product,t2c:0,k2c:0,tiktok:0,si:0,revenue:0,cogs_ng:0,profit_ng:0,cogs_wg:0,profit_wg:0};
       if(r.platform==='T2C Mall') bySkuFiltered[r.sku].t2c+=r.qty;
       if(r.platform==='K2C Mall') bySkuFiltered[r.sku].k2c+=r.qty;
       if(r.platform==='TikTok')   bySkuFiltered[r.sku].tiktok+=r.qty;
       if(r.platform==='Sỉ')       bySkuFiltered[r.sku].si+=r.qty;
       bySkuFiltered[r.sku].revenue+=r.revenue;
-      bySkuFiltered[r.sku].cogs+=r.cogs;
-      bySkuFiltered[r.sku].profit+=r.revenue-r.cogs;
+      bySkuFiltered[r.sku].cogs_ng+=r.cogs_ng; bySkuFiltered[r.sku].profit_ng+=r.revenue-r.cogs_ng;
+      bySkuFiltered[r.sku].cogs_wg+=r.cogs_wg; bySkuFiltered[r.sku].profit_wg+=r.revenue-r.cogs_wg;
     });
-    headers=['SKU','Tên SP','SL Shopee T2C','SL Shopee K2C','SL Shopee (T2C+K2C)','SL TikTok','SL Sỉ','Tổng SL','Doanh thu','Giá vốn','Lợi nhuận','GM%'];
+    headers=['SKU','Tên SP','SL Shopee T2C','SL Shopee K2C','SL Shopee (T2C+K2C)','SL TikTok','SL Sỉ','Tổng SL','Doanh thu',
+      'Giá vốn (Không gộp quà)','Lợi nhuận (Không gộp quà)','GM% (Không gộp quà)',
+      'Giá vốn (Gộp quà)','Lợi nhuận (Gộp quà)','GM% (Gộp quà)'];
     rows=Object.values(bySkuFiltered).sort((a,b)=>b.revenue-a.revenue).map(s=>{
       const shopee=s.t2c+s.k2c;
       const total=shopee+s.tiktok+s.si;
-      const gm=s.revenue>0?s.profit/s.revenue:0;
-      return[s.sku,s.product,s.t2c,s.k2c,shopee,s.tiktok,s.si,total,s.revenue,s.cogs,s.profit,(gm*100).toFixed(2)+'%'];
+      const gmNg=s.revenue>0?s.profit_ng/s.revenue:0;
+      const gmWg=s.revenue>0?s.profit_wg/s.revenue:0;
+      return[s.sku,s.product,s.t2c,s.k2c,shopee,s.tiktok,s.si,total,s.revenue,
+        s.cogs_ng,s.profit_ng,(gmNg*100).toFixed(2)+'%',
+        s.cogs_wg,s.profit_wg,(gmWg*100).toFixed(2)+'%'];
     });
   }
   const csv=[headers,...rows].map(r=>r.map(c=>`"${c}"`).join(',')).join('\n');
@@ -755,8 +816,8 @@ loadConfig();
 // Reset activePlatforms ve du 4 san (tranh localStorage cu thieu San)
 activePlatforms = new Set(['T2C Mall','K2C Mall','TikTok','Sỉ']);
 document.querySelectorAll('.platform-chip').forEach(el=>el.classList.add('active'));
-activePlatforms = new Set(['T2C Mall','K2C Mall','TikTok','Sỉ']);
-document.querySelectorAll('.platform-chip').forEach(el=>el.classList.add('active'));
+// Danh dau nut toggle rule gia von dung trang thai da luu (mac dinh: Gop qua)
+document.querySelectorAll('.cost-toggle-btn').forEach(b=>b.classList.toggle('active', b.dataset.rule===costRule));
 if (sbUrl() && sbKey()) loadData();
 else setStatus('Nhập Supabase URL và Key để bắt đầu');
 </script>
