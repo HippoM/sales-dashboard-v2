@@ -352,7 +352,7 @@ async function fetchMonth(ym) {
   const BATCH = 1000;  // Supabase gioi han 1000 rows/request
   let offset = 0, rows = [], hasMore = true;
   while (hasMore) {
-    const url = `${sbUrl()}/rest/v1/orders?select=order_id,order_date,platform,sku,product_name,qty,revenue,cogs,gross_profit,gm_pct,cogs_with_gift,gross_profit_with_gift,gm_pct_with_gift,status&order=order_date.asc,id.asc&order_date=gte.${dateFrom}&order_date=lt.${dateTo}&offset=${offset}&limit=${BATCH}`;
+    const url = `${sbUrl()}/rest/v1/orders?select=order_id,order_date,platform,sku,product_name,qty,revenue,cogs,gross_profit,gm_pct,cogs_with_gift,gross_profit_with_gift,gm_pct_with_gift,status,brand&order=order_date.asc,id.asc&order_date=gte.${dateFrom}&order_date=lt.${dateTo}&offset=${offset}&limit=${BATCH}`;
     const res = await fetch(url, {
       headers: { 'apikey': sbKey(), 'Authorization': `Bearer ${sbKey()}`,
         'Prefer': 'count=none' }
@@ -389,6 +389,7 @@ function parseRows(rows) {
       profit:     costRule==='with_gift' ? profit_wg : profit_ng,
       gm:         costRule==='with_gift' ? gm_wg      : gm_ng,
       status:     r.status       || '',
+      brand:      r.brand        || '',
     };
   }).filter(r => r.order_date);
 }
@@ -533,7 +534,7 @@ function applyFilters() {
   const from = new Date(document.getElementById('dateFrom').value + 'T00:00:00');
   const to   = new Date(document.getElementById('dateTo').value + 'T23:59:59');
   filteredData = allData.filter(r =>
-    r.order_date >= from && r.order_date <= to && activePlatforms.has(r.platform) && activeBrands.has(r.brand) || (!r.brand && activeBrands.size === 3)
+    r.order_date >= from && r.order_date <= to && activePlatforms.has(r.platform) && (activeBrands.has(r.brand) || !r.brand)
   );
   renderAll();
 }
