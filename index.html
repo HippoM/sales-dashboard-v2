@@ -46,11 +46,20 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .platform-filters{display:flex;gap:8px;flex-wrap:wrap}
 .platform-chip{display:flex;align-items:center;gap:6px;padding:6px 12px;border:0.5px solid var(--border2);border-radius:20px;cursor:pointer;font-size:12px;color:var(--text2);background:transparent;user-select:none}
 .platform-chip.active{color:#fff;border-color:transparent}
-.platform-chip.t2c.active{background:#378ADD}
-.platform-chip.k2c.active{background:#1D9E75}
-.platform-chip.ttk.active{background:#534AB7}
-.platform-chip.si.active{background:#ea580c}
+.platform-chip.t2c.active{background:#7BB3E0;color:#1a3a5c}
+.platform-chip.k2c.active{background:#6DC9A5;color:#0d3d28}
+.platform-chip.ttk.active{background:#A89FD6;color:#2d1f5e}
+.platform-chip.si.active{background:#F4A76F;color:#5c2a00}
 .platform-chip .dot{width:7px;height:7px;border-radius:50%;background:currentColor}
+.brand-chip{display:flex;align-items:center;gap:6px;padding:6px 12px;border:0.5px solid var(--border2);border-radius:20px;cursor:pointer;font-size:12px;color:var(--text2);background:transparent;user-select:none}
+.brand-chip.active{color:#fff;border-color:transparent}
+.brand-chip.lnl.active{background:#378ADD}
+.brand-chip.elmich.active{background:#E05C5C}
+.brand-chip.toky.active{background:#3AAFA9}
+.brand-chip.toky-light.active{background:#f9efb4;color:#7a6a00}
+.platform-chip.toky-chip.active{background:#f9efb4;color:#7a6a00}
+.brand-chip.other.active{background:#7f8c8d}
+.platform-chip[style*="--ac"].active{background:var(--ac);color:var(--ac-text,#fff);border-color:transparent}
 .btn{padding:8px 16px;border-radius:var(--radius-sm);font-size:13px;cursor:pointer;border:0.5px solid var(--border2);background:var(--surface);color:var(--text);font-family:inherit;display:inline-flex;align-items:center;gap:6px}
 .btn:hover{background:var(--surface2)}
 .btn-primary{background:var(--blue);color:#fff;border-color:var(--blue)}
@@ -148,6 +157,18 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
       <div class="platform-chip k2c active" onclick="togglePlatform('K2C Mall',this)"><span class="dot"></span> Shopee K2C</div>
       <div class="platform-chip ttk active" onclick="togglePlatform('TikTok',this)"><span class="dot"></span> TikTok Shop</div>
       <div class="platform-chip si active" onclick="togglePlatform('Sỉ',this)"><span class="dot"></span> Sỉ</div>
+      <div class="platform-chip" style="--ac:#f9efb4;--ac-text:#7a6a00" onclick="togglePlatform('Toky Shopee',this)"><span class="dot"></span> Toky Shopee</div>
+      <div class="platform-chip" style="--ac:#f0d96a;--ac-text:#5a4a00" onclick="togglePlatform('Toky TikTok',this)"><span class="dot"></span> Toky TikTok</div>
+      <div class="platform-chip" style="--ac:#F08080;--ac-text:#5c1a1a" onclick="togglePlatform('Elmich Shopee',this)"><span class="dot"></span> Elmich Shopee</div>
+      <div class="platform-chip" style="--ac:#D94F4F;--ac-text:#fff" onclick="togglePlatform('Elmich TikTok',this)"><span class="dot"></span> Elmich TikTok</div>
+    </div>
+  </div>
+  <div class="filter-group">
+    <label>Brand</label>
+    <div class="platform-filters" id="brand-filters">
+      <div class="brand-chip lnl active" onclick="toggleBrand('LocknLock',this)"><span class="dot" style="background:#378ADD"></span> LocknLock</div>
+      <div class="brand-chip elmich active" onclick="toggleBrand('Elmich',this)"><span class="dot" style="background:#E05C5C"></span> Elmich</div>
+      <div class="brand-chip toky active" onclick="toggleBrand('Tactflow',this)"><span class="dot" style="background:#3AAFA9"></span> Tactflow</div>
     </div>
   </div>
   <div class="filter-group">
@@ -261,7 +282,8 @@ const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 let allData = [], filteredData = [];
 let gmChart, revChart, skuChart;
 let sortState = {day:{key:'date',dir:-1}, sku:{key:'revenue',dir:-1}};
-let activePlatforms = new Set(['T2C Mall','K2C Mall','TikTok','Sỉ']);
+let activePlatforms = new Set(['T2C Mall','K2C Mall','TikTok','Sỉ','Toky Shopee','Toky TikTok','Elmich Shopee','Elmich TikTok']);
+let activeBrands = new Set(['LocknLock','Elmich','Tactflow']);
 let configVisible = true;
 // Rule tinh gia von: 'with_gift' (mac dinh) hoac 'no_gift'
 let costRule = localStorage.getItem('cost_rule') || 'with_gift';
@@ -497,11 +519,21 @@ function togglePlatform(name, el) {
   applyFilters();
 }
 
+function toggleBrand(name, el) {
+  if (activeBrands.has(name)) {
+    if (activeBrands.size===1) return;
+    activeBrands.delete(name); el.classList.remove('active');
+  } else {
+    activeBrands.add(name); el.classList.add('active');
+  }
+  applyFilters();
+}
+
 function applyFilters() {
   const from = new Date(document.getElementById('dateFrom').value + 'T00:00:00');
   const to   = new Date(document.getElementById('dateTo').value + 'T23:59:59');
   filteredData = allData.filter(r =>
-    r.order_date >= from && r.order_date <= to && activePlatforms.has(r.platform)
+    r.order_date >= from && r.order_date <= to && activePlatforms.has(r.platform) && activeBrands.has(r.brand) || (!r.brand && activeBrands.size === 3)
   );
   renderAll();
 }
@@ -813,8 +845,8 @@ function setStatus(msg,type='') {
 }
 
 loadConfig();
-// Reset activePlatforms ve du 4 san (tranh localStorage cu thieu San)
-activePlatforms = new Set(['T2C Mall','K2C Mall','TikTok','Sỉ']);
+// Reset activePlatforms ve tat ca san
+activePlatforms = new Set(['T2C Mall','K2C Mall','TikTok','Sỉ','Toky Shopee','Toky TikTok','Elmich Shopee','Elmich TikTok']);
 document.querySelectorAll('.platform-chip').forEach(el=>el.classList.add('active'));
 // Danh dau nut toggle rule gia von dung trang thai da luu (mac dinh: Gop qua)
 document.querySelectorAll('.cost-toggle-btn').forEach(b=>b.classList.toggle('active', b.dataset.rule===costRule));
