@@ -58,7 +58,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .brand-chip.toky.active{background:#3AAFA9}
 .brand-chip.toky-light.active{background:#f9efb4;color:#7a6a00}
 .platform-chip.toky-chip.active{background:#f9efb4;color:#7a6a00}
-.brand-chip.other.active{background:#7f8c8d}
+.brand-chip.other.active{background:#6b7280}
 .platform-chip[style*="--ac"].active{background:var(--ac);color:var(--ac-text,#fff);border-color:transparent}
 .btn{padding:8px 16px;border-radius:var(--radius-sm);font-size:13px;cursor:pointer;border:0.5px solid var(--border2);background:var(--surface);color:var(--text);font-family:inherit;display:inline-flex;align-items:center;gap:6px}
 .btn:hover{background:var(--surface2)}
@@ -169,6 +169,7 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
       <div class="brand-chip lnl active" onclick="toggleBrand('LocknLock',this)"><span class="dot" style="background:#378ADD"></span> LocknLock</div>
       <div class="brand-chip elmich active" onclick="toggleBrand('Elmich',this)"><span class="dot" style="background:#E05C5C"></span> Elmich</div>
       <div class="brand-chip toky active" onclick="toggleBrand('Tactflow',this)"><span class="dot" style="background:#3AAFA9"></span> Tactflow</div>
+      <div class="brand-chip other active" onclick="toggleBrand('',this)"><span class="dot" style="background:#6b7280"></span> Khác</div>
     </div>
   </div>
   <div class="filter-group">
@@ -283,7 +284,7 @@ let allData = [], filteredData = [];
 let gmChart, revChart, skuChart;
 let sortState = {day:{key:'date',dir:-1}, sku:{key:'revenue',dir:-1}};
 let activePlatforms = new Set(['T2C Mall','K2C Mall','TikTok','Sỉ','Toky Shopee','Toky TikTok','Elmich Shopee','Elmich TikTok']);
-let activeBrands = new Set(['LocknLock','Elmich','Tactflow']);
+let activeBrands = new Set(['LocknLock','Elmich','Tactflow','']);
 let configVisible = true;
 // Rule tinh gia von: 'with_gift' (mac dinh) hoac 'no_gift'
 let costRule = localStorage.getItem('cost_rule') || 'with_gift';
@@ -534,7 +535,7 @@ function applyFilters() {
   const from = new Date(document.getElementById('dateFrom').value + 'T00:00:00');
   const to   = new Date(document.getElementById('dateTo').value + 'T23:59:59');
   filteredData = allData.filter(r =>
-    r.order_date >= from && r.order_date <= to && activePlatforms.has(r.platform) && (activeBrands.has(r.brand) || !r.brand)
+    r.order_date >= from && r.order_date <= to && activePlatforms.has(r.platform) && activeBrands.has(r.brand)
   );
   renderAll();
 }
