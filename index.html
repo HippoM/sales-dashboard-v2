@@ -734,41 +734,6 @@ function sortTable(tbl,key) {
 }
 
 function exportTongHop() {
-  // Sheet 1: SKU | SL Shopee (T2C+K2C) | SL Si | SL TikTok
-  // Sheet 2: SKU | SL T2C | SL K2C | SL Si | SL TikTok (chi tiet)
-  const bySkuFiltered={};
-  filteredData.forEach(r=>{
-    if(!bySkuFiltered[r.sku]) bySkuFiltered[r.sku]={
-      sku:r.sku, product:r.product,
-      t2c:0, k2c:0, tiktok:0, si:0
-    };
-    if(r.platform==='T2C Mall') bySkuFiltered[r.sku].t2c+=r.qty;
-    if(r.platform==='K2C Mall') bySkuFiltered[r.sku].k2c+=r.qty;
-    if(r.platform==='TikTok')   bySkuFiltered[r.sku].tiktok+=r.qty;
-    if(r.platform==='Sỉ')       bySkuFiltered[r.sku].si+=r.qty;
-  });
-
-  const sorted = Object.values(bySkuFiltered).sort((a,b)=>(b.t2c+b.k2c+b.tiktok+b.si)-(a.t2c+a.k2c+a.tiktok+a.si));
-
-  // Sheet 1: Tong hop
-  const sheet1Data = [
-    ['SKU', 'Tên SP', 'SL Shopee (T2C+K2C)', 'SL Sỉ', 'SL TikTok', 'Tổng SL'],
-    ...sorted.map(s=>[s.sku, s.product, s.t2c+s.k2c, s.si, s.tiktok, s.t2c+s.k2c+s.si+s.tiktok])
-  ];
-
-  // Sheet 2: Chi tiet
-  const sheet2Data = [
-    ['SKU', 'Tên SP', 'SL T2C Mall', 'SL K2C Mall', 'SL Shopee (T2C+K2C)', 'SL Sỉ', 'SL TikTok', 'Tổng SL'],
-    ...sorted.map(s=>[s.sku, s.product, s.t2c, s.k2c, s.t2c+s.k2c, s.si, s.tiktok, s.t2c+s.k2c+s.si+s.tiktok])
-  ];
-
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(sheet1Data), 'Tổng hợp');
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(sheet2Data), 'Chi tiết theo sàn');
-  XLSX.writeFile(wb, `SL_ban_${new Date().toISOString().slice(0,10)}.xlsx`);
-}
-
-function exportTongHop() {
   const bySkuFiltered={};
   filteredData.forEach(r=>{
     if(!bySkuFiltered[r.sku]) bySkuFiltered[r.sku]={sku:r.sku,product:r.product,t2c:0,k2c:0,tiktok:0,si:0,revenue:0,cogs:0,profit:0};
