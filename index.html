@@ -736,23 +736,44 @@ function sortTable(tbl,key) {
 function exportTongHop() {
   const bySkuFiltered={};
   filteredData.forEach(r=>{
-    if(!bySkuFiltered[r.sku]) bySkuFiltered[r.sku]={sku:r.sku,product:r.product,t2c:0,k2c:0,tiktok:0,si:0,revenue:0,cogs:0,profit:0};
-    if(r.platform==='T2C Mall') bySkuFiltered[r.sku].t2c+=r.qty;
-    if(r.platform==='K2C Mall') bySkuFiltered[r.sku].k2c+=r.qty;
-    if(r.platform==='TikTok')   bySkuFiltered[r.sku].tiktok+=r.qty;
-    if(r.platform==='Sỉ')       bySkuFiltered[r.sku].si+=r.qty;
-    bySkuFiltered[r.sku].revenue+=r.revenue;
-    bySkuFiltered[r.sku].cogs+=r.cogs;
-    bySkuFiltered[r.sku].profit+=r.revenue-r.cogs;
+    if(!bySkuFiltered[r.sku]) bySkuFiltered[r.sku]={
+      sku:r.sku,product:r.product,brand:r.brand||'',
+      t2c:0,k2c:0,tiktok:0,si:0,
+      toky_shopee:0,toky_tiktok:0,elmich_shopee:0,elmich_tiktok:0,
+      revenue:0,cogs:0,profit:0
+    };
+    const s=bySkuFiltered[r.sku];
+    if(r.platform==='T2C Mall')      s.t2c+=r.qty;
+    if(r.platform==='K2C Mall')      s.k2c+=r.qty;
+    if(r.platform==='TikTok')        s.tiktok+=r.qty;
+    if(r.platform==='Sỉ')            s.si+=r.qty;
+    if(r.platform==='Toky Shopee')   s.toky_shopee+=r.qty;
+    if(r.platform==='Toky TikTok')   s.toky_tiktok+=r.qty;
+    if(r.platform==='Elmich Shopee') s.elmich_shopee+=r.qty;
+    if(r.platform==='Elmich TikTok') s.elmich_tiktok+=r.qty;
+    s.revenue+=r.revenue;
+    s.cogs+=r.cogs;
+    s.profit+=r.revenue-r.cogs;
   });
-  const sorted=Object.values(bySkuFiltered).sort((a,b)=>(b.t2c+b.k2c+b.tiktok+b.si)-(a.t2c+a.k2c+a.tiktok+a.si));
+  const sorted=Object.values(bySkuFiltered).sort((a,b)=>{
+    const ta=a.t2c+a.k2c+a.tiktok+a.si+a.toky_shopee+a.toky_tiktok+a.elmich_shopee+a.elmich_tiktok;
+    const tb=b.t2c+b.k2c+b.tiktok+b.si+b.toky_shopee+b.toky_tiktok+b.elmich_shopee+b.elmich_tiktok;
+    return tb-ta;
+  });
   const sheet1Data=[
-    ['SKU','Tên SP','SL Shopee (T2C+K2C)','SL Sỉ','SL TikTok','Tổng SL'],
-    ...sorted.map(s=>[s.sku,s.product,s.t2c+s.k2c,s.si,s.tiktok,s.t2c+s.k2c+s.si+s.tiktok])
+    ['SKU','Tên SP','Brand','SL LnL Shopee (T2C+K2C)','SL LnL TikTok','SL Sỉ','SL Toky Shopee','SL Toky TikTok','SL Elmich Shopee','SL Elmich TikTok','Tổng SL','Doanh thu','Giá vốn','Lợi nhuận gộp','GM%'],
+    ...sorted.map(s=>{
+      const totalSL=s.t2c+s.k2c+s.tiktok+s.si+s.toky_shopee+s.toky_tiktok+s.elmich_shopee+s.elmich_tiktok;
+      const gm=s.revenue>0?((s.revenue-s.cogs)/s.revenue):0;
+      return [s.sku,s.product,s.brand,s.t2c+s.k2c,s.tiktok,s.si,s.toky_shopee,s.toky_tiktok,s.elmich_shopee,s.elmich_tiktok,totalSL,s.revenue,s.cogs,s.profit,gm];
+    })
   ];
   const sheet2Data=[
-    ['SKU','Tên SP','SL T2C Mall','SL K2C Mall','SL Shopee (T2C+K2C)','SL Sỉ','SL TikTok','Tổng SL'],
-    ...sorted.map(s=>[s.sku,s.product,s.t2c,s.k2c,s.t2c+s.k2c,s.si,s.tiktok,s.t2c+s.k2c+s.si+s.tiktok])
+    ['SKU','Tên SP','Brand','SL T2C','SL K2C','SL LnL TikTok','SL Sỉ','SL Toky Shopee','SL Toky TikTok','SL Elmich Shopee','SL Elmich TikTok','Tổng SL'],
+    ...sorted.map(s=>{
+      const totalSL=s.t2c+s.k2c+s.tiktok+s.si+s.toky_shopee+s.toky_tiktok+s.elmich_shopee+s.elmich_tiktok;
+      return [s.sku,s.product,s.brand,s.t2c,s.k2c,s.tiktok,s.si,s.toky_shopee,s.toky_tiktok,s.elmich_shopee,s.elmich_tiktok,totalSL];
+    })
   ];
   const wb=XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(sheet1Data),'Tổng hợp');
@@ -777,24 +798,30 @@ function exportCSV(type) {
   } else {
     const bySkuFiltered={};
     filteredData.forEach(r=>{
-      if(!bySkuFiltered[r.sku]) bySkuFiltered[r.sku]={sku:r.sku,product:r.product,t2c:0,k2c:0,tiktok:0,si:0,revenue:0,cogs_ng:0,profit_ng:0,cogs_wg:0,profit_wg:0};
-      if(r.platform==='T2C Mall') bySkuFiltered[r.sku].t2c+=r.qty;
-      if(r.platform==='K2C Mall') bySkuFiltered[r.sku].k2c+=r.qty;
-      if(r.platform==='TikTok')   bySkuFiltered[r.sku].tiktok+=r.qty;
-      if(r.platform==='Sỉ')       bySkuFiltered[r.sku].si+=r.qty;
-      bySkuFiltered[r.sku].revenue+=r.revenue;
-      bySkuFiltered[r.sku].cogs_ng+=r.cogs_ng; bySkuFiltered[r.sku].profit_ng+=r.revenue-r.cogs_ng;
-      bySkuFiltered[r.sku].cogs_wg+=r.cogs_wg; bySkuFiltered[r.sku].profit_wg+=r.revenue-r.cogs_wg;
+      if(!bySkuFiltered[r.sku]) bySkuFiltered[r.sku]={sku:r.sku,product:r.product,brand:r.brand||'',
+        t2c:0,k2c:0,tiktok:0,si:0,toky_shopee:0,toky_tiktok:0,elmich_shopee:0,elmich_tiktok:0,
+        revenue:0,cogs_ng:0,profit_ng:0,cogs_wg:0,profit_wg:0};
+      const ss=bySkuFiltered[r.sku];
+      if(r.platform==='T2C Mall')      ss.t2c+=r.qty;
+      if(r.platform==='K2C Mall')      ss.k2c+=r.qty;
+      if(r.platform==='TikTok')        ss.tiktok+=r.qty;
+      if(r.platform==='Sỉ')            ss.si+=r.qty;
+      if(r.platform==='Toky Shopee')   ss.toky_shopee+=r.qty;
+      if(r.platform==='Toky TikTok')   ss.toky_tiktok+=r.qty;
+      if(r.platform==='Elmich Shopee') ss.elmich_shopee+=r.qty;
+      if(r.platform==='Elmich TikTok') ss.elmich_tiktok+=r.qty;
+      ss.revenue+=r.revenue;
+      ss.cogs_ng+=r.cogs_ng; ss.profit_ng+=r.revenue-r.cogs_ng;
+      ss.cogs_wg+=r.cogs_wg; ss.profit_wg+=r.revenue-r.cogs_wg;
     });
-    headers=['SKU','Tên SP','SL Shopee T2C','SL Shopee K2C','SL Shopee (T2C+K2C)','SL TikTok','SL Sỉ','Tổng SL','Doanh thu',
+    headers=['SKU','Tên SP','Brand','SL T2C','SL K2C','SL LnL TikTok','SL Sỉ','SL Toky Shopee','SL Toky TikTok','SL Elmich Shopee','SL Elmich TikTok','Tổng SL','Doanh thu',
       'Giá vốn (Không gộp quà)','Lợi nhuận (Không gộp quà)','GM% (Không gộp quà)',
       'Giá vốn (Gộp quà)','Lợi nhuận (Gộp quà)','GM% (Gộp quà)'];
     rows=Object.values(bySkuFiltered).sort((a,b)=>b.revenue-a.revenue).map(s=>{
-      const shopee=s.t2c+s.k2c;
-      const total=shopee+s.tiktok+s.si;
+      const total=s.t2c+s.k2c+s.tiktok+s.si+s.toky_shopee+s.toky_tiktok+s.elmich_shopee+s.elmich_tiktok;
       const gmNg=s.revenue>0?s.profit_ng/s.revenue:0;
       const gmWg=s.revenue>0?s.profit_wg/s.revenue:0;
-      return[s.sku,s.product,s.t2c,s.k2c,shopee,s.tiktok,s.si,total,s.revenue,
+      return[s.sku,s.product,s.brand,s.t2c,s.k2c,s.tiktok,s.si,s.toky_shopee,s.toky_tiktok,s.elmich_shopee,s.elmich_tiktok,total,s.revenue,
         s.cogs_ng,s.profit_ng,(gmNg*100).toFixed(2)+'%',
         s.cogs_wg,s.profit_wg,(gmWg*100).toFixed(2)+'%'];
     });
