@@ -801,7 +801,7 @@ function exportCSV(type) {
     const bySkuFiltered={};
     filteredData.forEach(r=>{
       if(!bySkuFiltered[r.sku]) bySkuFiltered[r.sku]={sku:r.sku,product:r.product,brand:r.brand||'',
-        t2c:0,k2c:0,tiktok:0,si:0,toky_shopee:0,toky_tiktok:0,elmich_shopee:0,elmich_tiktok:0,
+        t2c:0,k2c:0,tiktok:0,si:0,toky_shopee:0,toky_tiktok:0,elmich_shopee:0,elmich_tiktok:0,top_value:0,
         revenue:0,cogs_ng:0,profit_ng:0,cogs_wg:0,profit_wg:0};
       const ss=bySkuFiltered[r.sku];
       if(r.platform==='T2C Mall')      ss.t2c+=r.qty;
@@ -812,18 +812,19 @@ function exportCSV(type) {
       if(r.platform==='Toky TikTok')   ss.toky_tiktok+=r.qty;
       if(r.platform==='Elmich Shopee') ss.elmich_shopee+=r.qty;
       if(r.platform==='Elmich TikTok') ss.elmich_tiktok+=r.qty;
+      if(r.platform==='Top Value')     ss.top_value+=r.qty;
       ss.revenue+=r.revenue;
       ss.cogs_ng+=r.cogs_ng; ss.profit_ng+=r.revenue-r.cogs_ng;
       ss.cogs_wg+=r.cogs_wg; ss.profit_wg+=r.revenue-r.cogs_wg;
     });
-    headers=['SKU','Tên SP','Brand','SL T2C','SL K2C','SL LnL TikTok','SL Sỉ','SL Toky Shopee','SL Toky TikTok','SL Elmich Shopee','SL Elmich TikTok','Tổng SL','Doanh thu',
+    headers=['SKU','Tên SP','Brand','SL T2C','SL K2C','SL LnL TikTok','SL Sỉ','SL Toky Shopee','SL Toky TikTok','SL Elmich Shopee','SL Elmich TikTok','SL Top Value','Tổng SL','Doanh thu',
       'Giá vốn (Không gộp quà)','Lợi nhuận (Không gộp quà)','GM% (Không gộp quà)',
       'Giá vốn (Gộp quà)','Lợi nhuận (Gộp quà)','GM% (Gộp quà)'];
     rows=Object.values(bySkuFiltered).sort((a,b)=>b.revenue-a.revenue).map(s=>{
-      const total=s.t2c+s.k2c+s.tiktok+s.si+s.toky_shopee+s.toky_tiktok+s.elmich_shopee+s.elmich_tiktok;
+      const total=s.t2c+s.k2c+s.tiktok+s.si+s.toky_shopee+s.toky_tiktok+s.elmich_shopee+s.elmich_tiktok+(s.top_value||0);
       const gmNg=s.revenue>0?s.profit_ng/s.revenue:0;
       const gmWg=s.revenue>0?s.profit_wg/s.revenue:0;
-      return[s.sku,s.product,s.brand,s.t2c,s.k2c,s.tiktok,s.si,s.toky_shopee,s.toky_tiktok,s.elmich_shopee,s.elmich_tiktok,total,s.revenue,
+      return[s.sku,s.product,s.brand,s.t2c,s.k2c,s.tiktok,s.si,s.toky_shopee,s.toky_tiktok,s.elmich_shopee,s.elmich_tiktok,s.top_value||0,total,s.revenue,
         s.cogs_ng,s.profit_ng,(gmNg*100).toFixed(2)+'%',
         s.cogs_wg,s.profit_wg,(gmWg*100).toFixed(2)+'%'];
     });
