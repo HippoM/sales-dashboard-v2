@@ -172,6 +172,7 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
         <div class="platform-chip" style="--ac:#f0d96a;--ac-text:#5a4a00" onclick="togglePlatform('Toky TikTok',this)"><span class="dot"></span> Toky TikTok</div>
         <div class="platform-chip" style="--ac:#F08080;--ac-text:#5c1a1a" onclick="togglePlatform('Elmich Shopee',this)"><span class="dot"></span> Elmich Shopee</div>
         <div class="platform-chip" style="--ac:#D94F4F;--ac-text:#fff" onclick="togglePlatform('Elmich TikTok',this)"><span class="dot"></span> Elmich TikTok</div>
+        <div class="platform-chip" style="--ac:#7C5CBF;--ac-text:#fff" onclick="togglePlatform('Top Value',this)"><span class="dot"></span> Top Value</div>
       </div>
     </div>
     <div class="filter-group">
@@ -288,7 +289,7 @@ const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 let allData = [], filteredData = [];
 let gmChart, revChart, skuChart;
 let sortState = {day:{key:'date',dir:-1}, sku:{key:'revenue',dir:-1}};
-let activePlatforms = new Set(['T2C Mall','K2C Mall','TikTok','Sỉ','Toky Shopee','Toky TikTok','Elmich Shopee','Elmich TikTok']);
+let activePlatforms = new Set(['T2C Mall','K2C Mall','TikTok','Sỉ','Toky Shopee','Toky TikTok','Elmich Shopee','Elmich TikTok','Top Value']);
 let activeBrands = new Set(['LocknLock','Elmich','Tactflow','']);
 let configVisible = true;
 // Rule tinh gia von: 'with_gift' (mac dinh) hoac 'no_gift'
@@ -739,7 +740,7 @@ function exportTongHop() {
     if(!bySkuFiltered[r.sku]) bySkuFiltered[r.sku]={
       sku:r.sku,product:r.product,brand:r.brand||'',
       t2c:0,k2c:0,tiktok:0,si:0,
-      toky_shopee:0,toky_tiktok:0,elmich_shopee:0,elmich_tiktok:0,
+      toky_shopee:0,toky_tiktok:0,elmich_shopee:0,elmich_tiktok:0,top_value:0,
       revenue:0,cogs:0,profit:0
     };
     const s=bySkuFiltered[r.sku];
@@ -751,6 +752,7 @@ function exportTongHop() {
     if(r.platform==='Toky TikTok')   s.toky_tiktok+=r.qty;
     if(r.platform==='Elmich Shopee') s.elmich_shopee+=r.qty;
     if(r.platform==='Elmich TikTok') s.elmich_tiktok+=r.qty;
+    if(r.platform==='Top Value')     s.top_value+=r.qty;
     s.revenue+=r.revenue;
     s.cogs+=r.cogs;
     s.profit+=r.revenue-r.cogs;
@@ -761,18 +763,18 @@ function exportTongHop() {
     return tb-ta;
   });
   const sheet1Data=[
-    ['SKU','Tên SP','Brand','SL LnL Shopee (T2C+K2C)','SL LnL TikTok','SL Sỉ','SL Toky Shopee','SL Toky TikTok','SL Elmich Shopee','SL Elmich TikTok','Tổng SL','Doanh thu','Giá vốn','Lợi nhuận gộp','GM%'],
+    ['SKU','Tên SP','Brand','SL LnL Shopee (T2C+K2C)','SL LnL TikTok','SL Sỉ','SL Toky Shopee','SL Toky TikTok','SL Elmich Shopee','SL Elmich TikTok','SL Top Value','Tổng SL','Doanh thu','Giá vốn','Lợi nhuận gộp','GM%'],
     ...sorted.map(s=>{
-      const totalSL=s.t2c+s.k2c+s.tiktok+s.si+s.toky_shopee+s.toky_tiktok+s.elmich_shopee+s.elmich_tiktok;
+      const totalSL=s.t2c+s.k2c+s.tiktok+s.si+s.toky_shopee+s.toky_tiktok+s.elmich_shopee+s.elmich_tiktok+(s.top_value||0);
       const gm=s.revenue>0?((s.revenue-s.cogs)/s.revenue):0;
-      return [s.sku,s.product,s.brand,s.t2c+s.k2c,s.tiktok,s.si,s.toky_shopee,s.toky_tiktok,s.elmich_shopee,s.elmich_tiktok,totalSL,s.revenue,s.cogs,s.profit,gm];
+      return [s.sku,s.product,s.brand,s.t2c+s.k2c,s.tiktok,s.si,s.toky_shopee,s.toky_tiktok,s.elmich_shopee,s.elmich_tiktok,s.top_value,totalSL,s.revenue,s.cogs,s.profit,gm];
     })
   ];
   const sheet2Data=[
-    ['SKU','Tên SP','Brand','SL T2C','SL K2C','SL LnL TikTok','SL Sỉ','SL Toky Shopee','SL Toky TikTok','SL Elmich Shopee','SL Elmich TikTok','Tổng SL'],
+    ['SKU','Tên SP','Brand','SL T2C','SL K2C','SL LnL TikTok','SL Sỉ','SL Toky Shopee','SL Toky TikTok','SL Elmich Shopee','SL Elmich TikTok','SL Top Value','Tổng SL'],
     ...sorted.map(s=>{
-      const totalSL=s.t2c+s.k2c+s.tiktok+s.si+s.toky_shopee+s.toky_tiktok+s.elmich_shopee+s.elmich_tiktok;
-      return [s.sku,s.product,s.brand,s.t2c,s.k2c,s.tiktok,s.si,s.toky_shopee,s.toky_tiktok,s.elmich_shopee,s.elmich_tiktok,totalSL];
+      const totalSL=s.t2c+s.k2c+s.tiktok+s.si+s.toky_shopee+s.toky_tiktok+s.elmich_shopee+s.elmich_tiktok+(s.top_value||0);
+      return [s.sku,s.product,s.brand,s.t2c,s.k2c,s.tiktok,s.si,s.toky_shopee,s.toky_tiktok,s.elmich_shopee,s.elmich_tiktok,s.top_value,totalSL];
     })
   ];
   const wb=XLSX.utils.book_new();
@@ -845,7 +847,7 @@ function setStatus(msg,type='') {
 
 loadConfig();
 // Reset activePlatforms ve tat ca san
-activePlatforms = new Set(['T2C Mall','K2C Mall','TikTok','Sỉ','Toky Shopee','Toky TikTok','Elmich Shopee','Elmich TikTok']);
+activePlatforms = new Set(['T2C Mall','K2C Mall','TikTok','Sỉ','Toky Shopee','Toky TikTok','Elmich Shopee','Elmich TikTok','Top Value']);
 document.querySelectorAll('.platform-chip').forEach(el=>el.classList.add('active'));
 // Danh dau nut toggle rule gia von dung trang thai da luu (mac dinh: Gop qua)
 document.querySelectorAll('.cost-toggle-btn').forEach(b=>b.classList.toggle('active', b.dataset.rule===costRule));
