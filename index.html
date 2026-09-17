@@ -156,7 +156,8 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
       <label>Cách tính giá vốn</label>
       <div class="quick-btns">
         <button class="quick-btn cost-toggle-btn" data-rule="with_gift" onclick="setCostRule('with_gift')">Gộp quà</button>
-        <button class="quick-btn cost-toggle-btn" data-rule="no_gift" onclick="setCostRule('no_gift')">Không gộp quà</button>
+        <button class="quick-btn xa-ton-btn active" data-xa="inc" onclick="setXaTon('inc',this)">Gộp SKU xả</button>
+        <button class="quick-btn xa-ton-btn" data-xa="exc" onclick="setXaTon('exc',this)">Không gộp SKU xả</button>
       </div>
     </div>
   </div>
@@ -294,6 +295,26 @@ let activeBrands = new Set(['LocknLock','Elmich','Tactflow','']);
 let configVisible = true;
 // Rule tinh gia von: 'with_gift' (mac dinh) hoac 'no_gift'
 let costRule = localStorage.getItem('cost_rule') || 'with_gift';
+// Set SKU xa ton (load tu Supabase)
+let xaTonSet = new Set();
+let xaTonMode = 'inc'; // 'inc' = gop ca xa ton, 'exc' = loai xa ton khoi GM total
+
+async function loadXaTon() {
+  try {
+    const res = await fetch(`${sbUrl()}/rest/v1/sku_xa_ton?select=sku&limit=5000`,
+      {headers:{'apikey':sbKey(),'Authorization':'Bearer '+sbKey()}});
+    const data = await res.json();
+    xaTonSet = new Set((data||[]).map(r=>r.sku));
+    console.log('SKU xa ton loaded:', xaTonSet.size);
+  } catch(e) { console.warn('Khong load duoc sku_xa_ton:', e); }
+}
+
+function setXaTon(mode, el) {
+  xaTonMode = mode;
+  document.querySelectorAll('.xa-ton-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  renderMetrics();
+}
 const PAGE_SIZE = 50000; // load toi da 50k rows moi lan
 
 // ── SUPABASE CLIENT (khong can SDK) ───────────────────────────
@@ -553,8 +574,12 @@ function renderAll() {
 }
 
 function renderMetrics() {
-  const rev=filteredData.reduce((s,r)=>s+r.revenue,0);
-  const cogs=filteredData.reduce((s,r)=>s+r.cogs,0);
+  // Neu mode 'exc': loai SKU xa ton ra khoi GM total (detail van tinh binh thuong)
+  const metricsData = xaTonMode==='exc' && xaTonSet.size>0
+    ? filteredData.filter(r => !xaTonSet.has(r.sku))
+    : filteredData;
+  const rev=metricsData.reduce((s,r)=>s+r.revenue,0);
+  const cogs=metricsData.reduce((s,r)=>s+r.cogs,0);
   const profit=rev-cogs, gm=rev>0?profit/rev:0, n=filteredData.length;
   document.getElementById('m-rev').textContent    = fmtVND(rev);
   document.getElementById('m-cogs').textContent   = fmtVND(cogs);
