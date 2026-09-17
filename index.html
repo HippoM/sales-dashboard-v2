@@ -363,12 +363,22 @@ function getCachedMonths() {
   catch { return {}; }
 }
 
+const _memCache = {};
 function setCachedMonth(ym, rows) {
+  // Luu vao memory de tranh QuotaExceededError
+  _memCache[ym] = rows;
   try {
     const cache = getCachedMonths();
     cache[ym] = rows;
     localStorage.setItem(CACHE_KEY, JSON.stringify(cache));
-  } catch(e) { console.warn('Cache full:', e); }
+  } catch(e) {
+    // localStorage day -> xoa cache cu va thu lai
+    try { localStorage.removeItem(CACHE_KEY); } catch(_) {}
+  }
+}
+
+function getCachedMonthMem(ym) {
+  return _memCache[ym] || null;
 }
 
 async function fetchMonth(ym) {
@@ -876,8 +886,10 @@ activePlatforms = new Set(['T2C Mall','K2C Mall','TikTok','Sỉ','Toky Shopee','
 document.querySelectorAll('.platform-chip').forEach(el=>el.classList.add('active'));
 // Danh dau nut toggle rule gia von dung trang thai da luu (mac dinh: Gop qua)
 document.querySelectorAll('.cost-toggle-btn').forEach(b=>b.classList.toggle('active', b.dataset.rule===costRule));
-if (sbUrl() && sbKey()) loadData();
-else setStatus('Nhập Supabase URL và Key để bắt đầu');
+if (sbUrl() && sbKey()) {
+  loadXaTon();
+  loadData();
+} else setStatus('Nhập Supabase URL và Key để bắt đầu');
 </script>
 </body>
 </html>
