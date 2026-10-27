@@ -262,20 +262,20 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
       </div>
     </div>
     <div class="tbl-wrap">
-      <table id="skuTable">
+      <table id="skuTable" style="table-layout:fixed;width:100%">
         <thead><tr>
-          <th onclick="sortTable('sku','sku')">SKU ↕</th>
-          <th onclick="sortTable('sku','product')">Tên sản phẩm ↕</th>
-          <th onclick="sortTable('sku','platform')">Sàn ↕</th>
-          <th onclick="sortTable('sku','qty')" style="text-align:right">SL ↕</th>
-          <th onclick="sortTable('sku','revenue')" style="text-align:right">Doanh thu ↕</th>
-          <th onclick="sortTable('sku','cogs')" style="text-align:right">Giá vốn ↕</th>
-          <th onclick="sortTable('sku','profit')" style="text-align:right">Lợi nhuận ↕</th>
-          <th onclick="sortTable('sku','gm')" style="text-align:right">GM% ↕</th>
-          <th style="text-align:right;border-left:1px solid var(--border2);color:var(--text3)" title="SL tháng trước cùng kỳ">SL T.trước ↕</th>
-          <th onclick="sortTable('sku','prev_revenue')" style="text-align:right;color:var(--text3)" title="Doanh thu tháng trước cùng kỳ">DT T.trước ↕</th>
-          <th onclick="sortTable('sku','qty_chg')" style="text-align:right;color:var(--text3)" title="% tăng/giảm số lượng so với tháng trước">Δ SL ↕</th>
-          <th onclick="sortTable('sku','rev_chg')" style="text-align:right;color:var(--text3)" title="% tăng/giảm doanh thu so với tháng trước">Δ DT ↕</th>
+          <th onclick="sortTable('sku','sku')" style="width:90px;min-width:70px">SKU ↕</th>
+          <th onclick="sortTable('sku','product')" style="min-width:140px">Tên sản phẩm ↕</th>
+          <th onclick="sortTable('sku','platform')" style="width:110px;min-width:90px">Sàn ↕</th>
+          <th onclick="sortTable('sku','qty')" style="text-align:right;width:60px">SL ↕</th>
+          <th onclick="sortTable('sku','revenue')" style="text-align:right;width:110px">Doanh thu ↕</th>
+          <th onclick="sortTable('sku','cogs')" style="text-align:right;width:100px">Giá vốn ↕</th>
+          <th onclick="sortTable('sku','profit')" style="text-align:right;width:100px">Lợi nhuận ↕</th>
+          <th onclick="sortTable('sku','gm')" style="text-align:right;width:68px">GM% ↕</th>
+          <th onclick="sortTable('sku','prev_qty')" style="text-align:right;width:75px;border-left:1px solid var(--border2);color:var(--text3)" title="SL tháng trước cùng kỳ">SL T.tr ↕</th>
+          <th onclick="sortTable('sku','prev_revenue')" style="text-align:right;width:100px;color:var(--text3)" title="Doanh thu tháng trước cùng kỳ">DT T.tr ↕</th>
+          <th onclick="sortTable('sku','qty_chg')" style="text-align:right;width:70px;color:var(--text3)" title="% tăng/giảm số lượng so với tháng trước">Δ SL ↕</th>
+          <th onclick="sortTable('sku','rev_chg')" style="text-align:right;width:70px;color:var(--text3)" title="% tăng/giảm doanh thu so với tháng trước">Δ DT ↕</th>
         </tr></thead>
         <tbody></tbody>
         <tfoot id="skuFoot"></tfoot>
@@ -910,9 +910,9 @@ function renderSKUTable() {
   document.querySelector('#skuTable tbody').innerHTML=skus.map(s=>{
     const hasPrev = (prevSkuMap[s.sku] !== undefined);
     return `<tr>
-    <td style="font-weight:500">${s.sku}</td>
-    <td style="color:var(--text2);max-width:200px;overflow:hidden;text-overflow:ellipsis">${s.product}</td>
-    <td style="font-size:11px;color:var(--text2)">${s.platform}</td>
+    <td style="font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:90px">${s.sku}</td>
+    <td style="color:var(--text2);overflow:hidden;text-overflow:ellipsis;max-width:160px">${s.product}</td>
+    <td style="font-size:11px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:110px">${s.platform}</td>
     <td class="num">${fmtVND(s.qty)}</td><td class="num">${fmtVND(s.revenue)}</td>
     <td class="num">${fmtVND(s.cogs)}</td><td class="num">${fmtVND(s.profit)}</td>
     <td class="num"><span class="badge ${gmClass(s.gm)}">${fmtPct(s.gm)}</span></td>
