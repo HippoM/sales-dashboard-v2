@@ -74,6 +74,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .metric .lbl{font-size:11px;color:var(--text2);margin-bottom:6px;text-transform:uppercase;letter-spacing:.04em;font-weight:500}
 .metric .val{font-size:22px;font-weight:600;line-height:1.1}
 .val.green{color:var(--green)}.val.blue{color:var(--blue)}.val.red{color:var(--red)}
+.metric .cmp{font-size:11px;margin-top:4px;display:flex;align-items:center;gap:3px;color:var(--text3)}
+.cmp .cmp-up{color:#1D9E75}.cmp .cmp-dn{color:#E24B4A}.cmp .cmp-neu{color:var(--text3)}
 .card{background:var(--surface);border:0.5px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:14px}
 .card-title{font-size:13px;font-weight:500;color:var(--text2);margin-bottom:16px}
 .chart-wrap{position:relative;width:100%}
@@ -189,12 +191,12 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
 
 <!-- Metrics -->
 <div class="metrics">
-  <div class="metric"><div class="lbl">Doanh thu</div><div class="val blue" id="m-rev">—</div></div>
-  <div class="metric"><div class="lbl">Giá vốn</div><div class="val" id="m-cogs">—</div></div>
-  <div class="metric"><div class="lbl">Lợi nhuận gộp</div><div class="val green" id="m-profit">—</div></div>
-  <div class="metric"><div class="lbl">Gross Margin</div><div class="val green" id="m-gm">—</div></div>
-  <div class="metric"><div class="lbl">Số đơn</div><div class="val" id="m-orders">—</div></div>
-  <div class="metric"><div class="lbl">DT/đơn TB</div><div class="val" id="m-avg">—</div></div>
+  <div class="metric"><div class="lbl">Doanh thu</div><div class="val blue" id="m-rev">—</div><div class="cmp" id="cmp-rev"></div></div>
+  <div class="metric"><div class="lbl">Giá vốn</div><div class="val" id="m-cogs">—</div><div class="cmp" id="cmp-cogs"></div></div>
+  <div class="metric"><div class="lbl">Lợi nhuận gộp</div><div class="val green" id="m-profit">—</div><div class="cmp" id="cmp-profit"></div></div>
+  <div class="metric"><div class="lbl">Gross Margin</div><div class="val green" id="m-gm">—</div><div class="cmp" id="cmp-gm"></div></div>
+  <div class="metric"><div class="lbl">Số đơn</div><div class="val" id="m-orders">—</div><div class="cmp" id="cmp-orders"></div></div>
+  <div class="metric"><div class="lbl">DT/đơn TB</div><div class="val" id="m-avg">—</div><div class="cmp" id="cmp-avg"></div></div>
 </div>
 
 <div class="tabs">
@@ -270,6 +272,10 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
           <th onclick="sortTable('sku','cogs')" style="text-align:right">Giá vốn ↕</th>
           <th onclick="sortTable('sku','profit')" style="text-align:right">Lợi nhuận ↕</th>
           <th onclick="sortTable('sku','gm')" style="text-align:right">GM% ↕</th>
+          <th style="text-align:right;border-left:1px solid var(--border2);color:var(--text3)" title="SL tháng trước cùng kỳ">SL T.trước ↕</th>
+          <th onclick="sortTable('sku','prev_revenue')" style="text-align:right;color:var(--text3)" title="Doanh thu tháng trước cùng kỳ">DT T.trước ↕</th>
+          <th onclick="sortTable('sku','qty_chg')" style="text-align:right;color:var(--text3)" title="% tăng/giảm số lượng so với tháng trước">Δ SL ↕</th>
+          <th onclick="sortTable('sku','rev_chg')" style="text-align:right;color:var(--text3)" title="% tăng/giảm doanh thu so với tháng trước">Δ DT ↕</th>
         </tr></thead>
         <tbody></tbody>
         <tfoot id="skuFoot"></tfoot>
@@ -292,6 +298,20 @@ let sortState = {day:{key:'date',dir:-1}, sku:{key:'revenue',dir:-1}};
 let activePlatforms = new Set(['T2C Mall','K2C Mall','TikTok','Sỉ','Toky Shopee','Toky TikTok','Elmich Shopee','Elmich TikTok','Top Value']);
 let activeBrands = new Set(['LocknLock','Elmich','Tactflow','']);
 let configVisible = true;
+
+// ── PLATFORM COLORS ───────────────────────────────────────────
+// Dung cho stacked bar chart - tuong ung mau chip filter
+const PLATFORM_COLORS = {
+  'T2C Mall':       {rev:'rgba(123,179,224,0.85)', cogs:'rgba(123,179,224,0.38)'},
+  'K2C Mall':       {rev:'rgba(109,201,165,0.85)', cogs:'rgba(109,201,165,0.38)'},
+  'TikTok':         {rev:'rgba(168,159,214,0.85)', cogs:'rgba(168,159,214,0.38)'},
+  'Sỉ':             {rev:'rgba(244,167,111,0.85)', cogs:'rgba(244,167,111,0.38)'},
+  'Toky Shopee':    {rev:'rgba(249,239,180,0.85)', cogs:'rgba(249,239,180,0.38)'},
+  'Toky TikTok':    {rev:'rgba(240,217,106,0.85)', cogs:'rgba(240,217,106,0.38)'},
+  'Elmich Shopee':  {rev:'rgba(240,128,128,0.85)', cogs:'rgba(240,128,128,0.38)'},
+  'Elmich TikTok':  {rev:'rgba(217,79,79,0.85)',   cogs:'rgba(217,79,79,0.38)'},
+  'Top Value':      {rev:'rgba(124,92,191,0.85)',  cogs:'rgba(124,92,191,0.38)'},
+};
 // Rule tinh gia von: 'with_gift' (mac dinh) hoac 'no_gift'
 let costRule = localStorage.getItem('cost_rule') || 'with_gift';
 // Set SKU xa ton (load tu Supabase)
@@ -556,12 +576,39 @@ function toggleBrand(name, el) {
   applyFilters();
 }
 
+// Tinh giai doan cung ky thang truoc tuong ung voi khoang thoi gian hien tai
+function getPrevPeriod(fromStr, toStr) {
+  const from = new Date(fromStr + 'T00:00:00');
+  const to   = new Date(toStr   + 'T23:59:59');
+  // Lay cung ngay nhung thang truoc
+  const pFrom = new Date(from); pFrom.setMonth(pFrom.getMonth() - 1);
+  const pTo   = new Date(to);   pTo.setMonth(pTo.getMonth() - 1);
+  // Xu ly truong hop thang truoc it ngay hon (vi du 31/3 -> 28/2)
+  // setMonth tu dong adjust nen pTo co the bi nhay sang thang toi; gioi han lai
+  const maxDayPrev = new Date(pFrom.getFullYear(), pFrom.getMonth()+1, 0).getDate();
+  if (pTo.getMonth() !== pFrom.getMonth()) {
+    pTo.setDate(0); // lui ve cuoi thang
+  }
+  return { pFrom, pTo };
+}
+
 function applyFilters() {
-  const from = new Date(document.getElementById('dateFrom').value + 'T00:00:00');
-  const to   = new Date(document.getElementById('dateTo').value + 'T23:59:59');
+  const fromStr = document.getElementById('dateFrom').value;
+  const toStr   = document.getElementById('dateTo').value;
+  const from = new Date(fromStr + 'T00:00:00');
+  const to   = new Date(toStr   + 'T23:59:59');
   filteredData = allData.filter(r =>
     r.order_date >= from && r.order_date <= to && activePlatforms.has(r.platform) && activeBrands.has(r.brand)
   );
+
+  // Tinh du lieu cung ky thang truoc
+  const { pFrom, pTo } = getPrevPeriod(fromStr, toStr);
+  window._prevFilteredData = allData.filter(r =>
+    r.order_date >= pFrom && r.order_date <= pTo && activePlatforms.has(r.platform) && activeBrands.has(r.brand)
+  );
+  window._prevFromStr = dateStr(pFrom);
+  window._prevToStr   = dateStr(pTo);
+
   renderAll();
 }
 
@@ -569,6 +616,25 @@ function applyFilters() {
 function renderAll() {
   renderMetrics(); renderGMChart(); renderRevChart();
   renderDayTable(); renderSKUChart(); renderSKUTable();
+}
+
+function chgBadge(chg, hasPrev) {
+  if (!hasPrev) return '<span style="color:var(--text3);font-size:11px">—</span>';
+  const sign = chg >= 0 ? '+' : '';
+  const cls  = chg > 0.005 ? 'color:#1D9E75' : chg < -0.005 ? 'color:#E24B4A' : 'color:var(--text3)';
+  return `<span style="font-size:11px;font-weight:600;${cls}">${chg>=0?'▲':'▼'} ${sign}${(chg*100).toFixed(1)}%</span>`;
+}
+
+function cmpHtml(cur, prev, isPct) {
+  if (!prev || prev === 0) return '<span class="cmp-neu">—</span>';
+  const pct = (cur - prev) / Math.abs(prev);
+  const sign = pct >= 0 ? '+' : '';
+  const cls  = pct > 0.005 ? 'cmp-up' : pct < -0.005 ? 'cmp-dn' : 'cmp-neu';
+  const label = isPct
+    ? `${sign}${(pct*100).toFixed(1)} pp`
+    : `${sign}${(pct*100).toFixed(1)}%`;
+  const prevLabel = isPct ? `(T.trước: ${fmtPct(prev)})` : `(T.trước: ${fmtVND(prev)})`;
+  return `<span class="${cls}">${pct>=0?'▲':'▼'} ${label}</span> <span style="color:var(--text3)">${prevLabel}</span>`;
 }
 
 function renderMetrics() {
@@ -579,13 +645,50 @@ function renderMetrics() {
   const rev=metricsData.reduce((s,r)=>s+r.revenue,0);
   const cogs=metricsData.reduce((s,r)=>s+r.cogs,0);
   const profit=rev-cogs, gm=rev>0?profit/rev:0, n=filteredData.length;
+  const avg = n>0?rev/n:0;
+
   document.getElementById('m-rev').textContent    = fmtVND(rev);
   document.getElementById('m-cogs').textContent   = fmtVND(cogs);
   document.getElementById('m-profit').textContent = fmtVND(profit);
   document.getElementById('m-gm').textContent     = fmtPct(gm);
   document.getElementById('m-gm').className       = 'val '+(gm>=0.4?'green':gm>=0.3?'':'red');
   document.getElementById('m-orders').textContent = n.toLocaleString();
-  document.getElementById('m-avg').textContent    = n>0?fmtVND(rev/n):'—';
+  document.getElementById('m-avg').textContent    = n>0?fmtVND(avg):'—';
+
+  // So sanh cung ky thang truoc
+  const prevData = (window._prevFilteredData || []);
+  const prevMD = xaTonMode==='exc' && xaTonSet.size>0
+    ? prevData.filter(r => !xaTonSet.has(r.sku))
+    : prevData;
+  const pRev   = prevMD.reduce((s,r)=>s+r.revenue,0);
+  const pCogs  = prevMD.reduce((s,r)=>s+r.cogs,0);
+  const pProfit= pRev-pCogs;
+  const pGm    = pRev>0?pProfit/pRev:0;
+  const pN     = prevData.length;
+  const pAvg   = pN>0?pRev/pN:0;
+  const pLabel = window._prevFromStr && window._prevToStr
+    ? `vs ${window._prevFromStr.slice(5)} – ${window._prevToStr.slice(5)}`
+    : 'vs tháng trước';
+
+  const setCmp = (id, cur, prev, isPct=false) => {
+    document.getElementById(id).innerHTML = cmpHtml(cur, prev, isPct);
+  };
+  setCmp('cmp-rev',    rev,    pRev);
+  setCmp('cmp-cogs',   cogs,   pCogs);
+  setCmp('cmp-profit', profit, pProfit);
+  setCmp('cmp-gm',     gm,     pGm,    true);
+  setCmp('cmp-orders', n,      pN);
+  setCmp('cmp-avg',    avg,    pAvg);
+  // Hien thi label giai doan so sanh
+  document.querySelectorAll('.cmp').forEach(el => {
+    if (!el.querySelector('.cmp-label')) {
+      const lbl = document.createElement('span');
+      lbl.className = 'cmp-label';
+      lbl.style.cssText = 'color:var(--text3);margin-left:4px;font-size:10px';
+      lbl.textContent = pLabel;
+      el.appendChild(lbl);
+    }
+  });
 }
 
 function groupByDay(data) {
@@ -631,20 +734,88 @@ function renderGMChart() {
   });
 }
 
+function groupByDayPlatform(data) {
+  // Tra ve { dates[], platformMap: {platform: {date: {revenue, cogs}}} }
+  const dateSet = new Set();
+  const platformMap = {};
+  data.forEach(r => {
+    const k = dateStr(r.order_date);
+    dateSet.add(k);
+    if (!platformMap[r.platform]) platformMap[r.platform] = {};
+    if (!platformMap[r.platform][k]) platformMap[r.platform][k] = {revenue:0, cogs:0};
+    platformMap[r.platform][k].revenue += r.revenue;
+    platformMap[r.platform][k].cogs    += r.cogs;
+  });
+  const dates = [...dateSet].sort();
+  return { dates, platformMap };
+}
+
 function renderRevChart() {
-  const days=groupByDay(filteredData);
-  const isDark=matchMedia('(prefers-color-scheme:dark)').matches;
+  const isDark = matchMedia('(prefers-color-scheme:dark)').matches;
+  const { dates, platformMap } = groupByDayPlatform(filteredData);
+
+  // Lay danh sach san theo thu tu active
+  const platforms = [...activePlatforms].filter(p => platformMap[p]);
+
+  // Tao datasets doanh thu (stacked) + 1 dataset gia von tong (khong stack)
+  const revDatasets = platforms.map(p => ({
+    label: p,
+    data: dates.map(d => (platformMap[p][d] || {revenue:0}).revenue),
+    backgroundColor: (PLATFORM_COLORS[p] || {rev:'rgba(150,150,140,0.7)'}).rev,
+    borderWidth: 0,
+    stack: 'revenue',
+  }));
+
+  // Gia von tong hop (toan bo cac san gop lai), stack rieng
+  const cogsData = dates.map(d =>
+    platforms.reduce((s, p) => s + (platformMap[p][d] || {cogs:0}).cogs, 0)
+  );
+  const cogsDataset = {
+    label: 'Giá vốn',
+    data: cogsData,
+    backgroundColor: 'rgba(150,150,140,0.35)',
+    borderWidth: 0,
+    stack: 'cogs',
+    order: 99,
+  };
+
   if(revChart) revChart.destroy();
-  revChart=new Chart(document.getElementById('revChart'),{
-    type:'bar',
-    data:{labels:days.map(d=>d.date.slice(5)),datasets:[
-      {label:'Doanh thu',data:days.map(d=>d.revenue),backgroundColor:'rgba(55,138,221,0.75)',borderWidth:0},
-      {label:'Giá vốn',  data:days.map(d=>d.cogs),   backgroundColor:'rgba(150,150,140,0.45)',borderWidth:0}
-    ]},
-    options:{responsive:true,maintainAspectRatio:false,
-      plugins:{legend:{display:true,position:'top',labels:{font:{size:11},boxWidth:10,padding:12}}},
-      scales:{y:{ticks:{callback:v=>{if(v>=1e9)return(v/1e9).toFixed(1)+'B';if(v>=1e6)return(v/1e6).toFixed(0)+'M';if(v>=1e3)return(v/1e3).toFixed(0)+'K';return v;},font:{size:10}},grid:{color:isDark?'rgba(255,255,255,0.06)':'rgba(0,0,0,0.06)'}},
-              x:{ticks:{font:{size:10},maxRotation:45,autoSkip:true,maxTicksLimit:24},grid:{display:false}}}}
+  revChart = new Chart(document.getElementById('revChart'), {
+    type: 'bar',
+    data: { labels: dates.map(d=>d.slice(5)), datasets: [...revDatasets, cogsDataset] },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          display: true, position: 'top',
+          labels: { font:{size:11}, boxWidth:10, padding:10,
+            filter: item => item.text !== 'Giá vốn' // an label gia von khoi legend
+          }
+        },
+        tooltip: {
+          callbacks: {
+            title: items => items[0].label,
+            label: item => {
+              const v = item.raw;
+              const label = item.dataset.label;
+              return ` ${label}: ${v>=1e6?(v/1e6).toFixed(1)+'M':v>=1e3?(v/1e3).toFixed(0)+'K':v}`;
+            },
+            footer: items => {
+              const total = items.filter(i=>i.dataset.stack==='revenue').reduce((s,i)=>s+i.raw,0);
+              return `Tổng DT: ${total>=1e6?(total/1e6).toFixed(1)+'M':total>=1e3?(total/1e3).toFixed(0)+'K':total}`;
+            }
+          }
+        }
+      },
+      scales: {
+        y: {
+          stacked: true,
+          ticks: { callback:v=>{if(v>=1e9)return(v/1e9).toFixed(1)+'B';if(v>=1e6)return(v/1e6).toFixed(0)+'M';if(v>=1e3)return(v/1e3).toFixed(0)+'K';return v;}, font:{size:10} },
+          grid: { color: isDark?'rgba(255,255,255,0.06)':'rgba(0,0,0,0.06)' }
+        },
+        x: { stacked: true, ticks:{font:{size:10},maxRotation:45,autoSkip:true,maxTicksLimit:24}, grid:{display:false} }
+      }
+    }
   });
 }
 
@@ -719,10 +890,16 @@ function renderSKUChart() {
 
 function renderSKUTable() {
   let skus=groupBySKU(filteredData);
+  // Tao map SKU -> {qty, revenue} tu prev data de so sanh
+  const prevSkuMap = {};
+  (window._prevFilteredData || []).forEach(r => {
+    if (!prevSkuMap[r.sku]) prevSkuMap[r.sku] = {qty:0, revenue:0};
+    prevSkuMap[r.sku].qty     += r.qty;
+    prevSkuMap[r.sku].revenue += r.revenue;
+  });
+
   const q=(document.getElementById('skuSearch').value||'').toLowerCase().trim();
   if(q) {
-    // Neu query khop chinh xac voi 1 SKU -> exact match
-    // Neu khong -> partial match (contains)
     const exactMatch = skus.some(s=>s.sku.toLowerCase()===q);
     if(exactMatch) {
       skus=skus.filter(s=>s.sku.toLowerCase()===q);
@@ -731,24 +908,50 @@ function renderSKUTable() {
     }
   }
   const {key,dir}=sortState.sku;
+  // Gan prev values truoc khi sort de co the sort theo cot delta
+  skus = skus.map(s => {
+    const prev = prevSkuMap[s.sku] || {qty:0, revenue:0};
+    const qty_chg = prev.qty > 0 ? (s.qty - prev.qty) / prev.qty : (s.qty > 0 ? 1 : 0);
+    const rev_chg = prev.revenue > 0 ? (s.revenue - prev.revenue) / prev.revenue : (s.revenue > 0 ? 1 : 0);
+    return {...s, prev_qty: prev.qty, prev_revenue: prev.revenue, qty_chg, rev_chg};
+  });
   skus.sort((a,b)=>{const av=a[key],bv=b[key];return dir*(typeof av==='string'?av.localeCompare(bv):bv-av);});
-  document.querySelector('#skuTable tbody').innerHTML=skus.map(s=>`<tr>
+
+  document.querySelector('#skuTable tbody').innerHTML=skus.map(s=>{
+    const hasPrev = (prevSkuMap[s.sku] !== undefined);
+    return `<tr>
     <td style="font-weight:500">${s.sku}</td>
     <td style="color:var(--text2);max-width:200px;overflow:hidden;text-overflow:ellipsis">${s.product}</td>
     <td style="font-size:11px;color:var(--text2)">${s.platform}</td>
     <td class="num">${fmtVND(s.qty)}</td><td class="num">${fmtVND(s.revenue)}</td>
     <td class="num">${fmtVND(s.cogs)}</td><td class="num">${fmtVND(s.profit)}</td>
-    <td class="num"><span class="badge ${gmClass(s.gm)}">${fmtPct(s.gm)}</span></td></tr>`).join('');
+    <td class="num"><span class="badge ${gmClass(s.gm)}">${fmtPct(s.gm)}</span></td>
+    <td class="num" style="border-left:1px solid var(--border2);color:var(--text3)">${hasPrev?fmtVND(s.prev_qty):'—'}</td>
+    <td class="num" style="color:var(--text3)">${hasPrev?fmtVND(s.prev_revenue):'—'}</td>
+    <td class="num">${chgBadge(s.qty_chg, hasPrev)}</td>
+    <td class="num">${chgBadge(s.rev_chg, hasPrev)}</td>
+    </tr>`;
+  }).join('');
+
   const tRev=skus.reduce((s,r)=>s+r.revenue,0),tCogs=skus.reduce((s,r)=>s+r.cogs,0);
   const tProfit=skus.reduce((s,r)=>s+r.profit,0),tGM=tRev>0?tProfit/tRev:0;
   const tQty=skus.reduce((s,r)=>s+r.qty,0);
+  const tPrevQty=skus.reduce((s,r)=>s+r.prev_qty,0);
+  const tPrevRev=skus.reduce((s,r)=>s+r.prev_revenue,0);
+  const tQtyChg = tPrevQty>0?(tQty-tPrevQty)/tPrevQty:0;
+  const tRevChg = tPrevRev>0?(tRev-tPrevRev)/tPrevRev:0;
   document.getElementById('skuFoot').innerHTML=`<tr class="summary-row">
     <td><strong>Tổng cộng</strong></td><td></td><td></td>
     <td class="num"><strong>${fmtVND(tQty)}</strong></td>
     <td class="num"><strong>${fmtVND(tRev)}</strong></td>
     <td class="num"><strong>${fmtVND(tCogs)}</strong></td>
     <td class="num"><strong>${fmtVND(tProfit)}</strong></td>
-    <td class="num"><span class="badge ${gmClass(tGM)}">${fmtPct(tGM)}</span></td></tr>`;
+    <td class="num"><span class="badge ${gmClass(tGM)}">${fmtPct(tGM)}</span></td>
+    <td class="num" style="border-left:1px solid var(--border2);color:var(--text3)"><strong>${fmtVND(tPrevQty)}</strong></td>
+    <td class="num" style="color:var(--text3)"><strong>${fmtVND(tPrevRev)}</strong></td>
+    <td class="num">${chgBadge(tQtyChg, tPrevQty>0)}</td>
+    <td class="num">${chgBadge(tRevChg, tPrevRev>0)}</td>
+    </tr>`;
 }
 
 function sortTable(tbl,key) {
