@@ -302,15 +302,15 @@ let configVisible = true;
 // ── PLATFORM COLORS ───────────────────────────────────────────
 // Dung cho stacked bar chart - tuong ung mau chip filter
 const PLATFORM_COLORS = {
-  'T2C Mall':       {rev:'rgba(123,179,224,0.85)', cogs:'rgba(123,179,224,0.38)'},
-  'K2C Mall':       {rev:'rgba(109,201,165,0.85)', cogs:'rgba(109,201,165,0.38)'},
-  'TikTok':         {rev:'rgba(168,159,214,0.85)', cogs:'rgba(168,159,214,0.38)'},
-  'Sỉ':             {rev:'rgba(244,167,111,0.85)', cogs:'rgba(244,167,111,0.38)'},
-  'Toky Shopee':    {rev:'rgba(249,239,180,0.85)', cogs:'rgba(249,239,180,0.38)'},
-  'Toky TikTok':    {rev:'rgba(240,217,106,0.85)', cogs:'rgba(240,217,106,0.38)'},
-  'Elmich Shopee':  {rev:'rgba(240,128,128,0.85)', cogs:'rgba(240,128,128,0.38)'},
-  'Elmich TikTok':  {rev:'rgba(217,79,79,0.85)',   cogs:'rgba(217,79,79,0.38)'},
-  'Top Value':      {rev:'rgba(124,92,191,0.85)',  cogs:'rgba(124,92,191,0.38)'},
+  'T2C Mall':       {rev:'rgba(123,179,224,1.0)'},
+  'K2C Mall':       {rev:'rgba(85,190,145,1.0)'},
+  'TikTok':         {rev:'rgba(148,135,210,1.0)'},
+  'Sỉ':             {rev:'rgba(244,163,97,1.0)'},
+  'Toky Shopee':    {rev:'rgba(220,208,120,1.0)'},
+  'Toky TikTok':    {rev:'rgba(200,175,60,1.0)'},
+  'Elmich Shopee':  {rev:'rgba(235,110,110,1.0)'},
+  'Elmich TikTok':  {rev:'rgba(200,65,65,1.0)'},
+  'Top Value':      {rev:'rgba(120,85,185,1.0)'},
 };
 // Rule tinh gia von: 'with_gift' (mac dinh) hoac 'no_gift'
 let costRule = localStorage.getItem('cost_rule') || 'with_gift';
@@ -633,8 +633,8 @@ function cmpHtml(cur, prev, isPct) {
   const label = isPct
     ? `${sign}${(pct*100).toFixed(1)} pp`
     : `${sign}${(pct*100).toFixed(1)}%`;
-  const prevLabel = isPct ? `(T.trước: ${fmtPct(prev)})` : `(T.trước: ${fmtVND(prev)})`;
-  return `<span class="${cls}">${pct>=0?'▲':'▼'} ${label}</span> <span style="color:var(--text3)">${prevLabel}</span>`;
+  const prevLabel = isPct ? `${fmtPct(prev)}` : `${fmtVND(prev)}`;
+  return `<span class="${cls}">${pct>=0?'▲':'▼'} ${label}</span><span style="color:var(--text3)"> (T.trước: ${prevLabel})</span>`;
 }
 
 function renderMetrics() {
@@ -679,16 +679,6 @@ function renderMetrics() {
   setCmp('cmp-gm',     gm,     pGm,    true);
   setCmp('cmp-orders', n,      pN);
   setCmp('cmp-avg',    avg,    pAvg);
-  // Hien thi label giai doan so sanh
-  document.querySelectorAll('.cmp').forEach(el => {
-    if (!el.querySelector('.cmp-label')) {
-      const lbl = document.createElement('span');
-      lbl.className = 'cmp-label';
-      lbl.style.cssText = 'color:var(--text3);margin-left:4px;font-size:10px';
-      lbl.textContent = pLabel;
-      el.appendChild(lbl);
-    }
-  });
 }
 
 function groupByDay(data) {
@@ -761,7 +751,7 @@ function renderRevChart() {
   const revDatasets = platforms.map(p => ({
     label: p,
     data: dates.map(d => (platformMap[p][d] || {revenue:0}).revenue),
-    backgroundColor: (PLATFORM_COLORS[p] || {rev:'rgba(150,150,140,0.7)'}).rev,
+    backgroundColor: (PLATFORM_COLORS[p] || {rev:'rgba(150,150,140,0.8)'}).rev,
     borderWidth: 0,
     stack: 'revenue',
   }));
