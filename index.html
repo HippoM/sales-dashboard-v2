@@ -349,9 +349,9 @@ function toggleConfig() {
 }
 
 // ── LOAD DATA ─────────────────────────────────────────────────
-// Cache cac thang da qua vao localStorage (giu giua cac lan refresh)
+// Cache cac thang da qua vao bo nho (in-memory)
 // Thang hien tai luon fetch moi, thang cu chi fetch 1 lan roi cache lai
-const CACHE_KEY = 'dash_month_cache_v1';
+const _memCache = {};
 
 function getCurrentYearMonth() {
   const now = new Date();
@@ -359,22 +359,11 @@ function getCurrentYearMonth() {
 }
 
 function getCachedMonths() {
-  try { return JSON.parse(localStorage.getItem(CACHE_KEY) || '{}'); }
-  catch { return {}; }
+  return _memCache;
 }
 
-const _memCache = {};
 function setCachedMonth(ym, rows) {
-  // Luu vao memory de tranh QuotaExceededError
   _memCache[ym] = rows;
-  try {
-    const cache = getCachedMonths();
-    cache[ym] = rows;
-    localStorage.setItem(CACHE_KEY, JSON.stringify(cache));
-  } catch(e) {
-    // localStorage day -> xoa cache cu va thu lai
-    try { localStorage.removeItem(CACHE_KEY); } catch(_) {}
-  }
 }
 
 function getCachedMonthMem(ym) {
