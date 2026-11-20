@@ -155,11 +155,21 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
         <button class="quick-btn" onclick="setRange('all',this)">Tất cả</button>
       </div>
     </div>
-    <div class="filter-group">
+    <div class="filter-group" style="display:none">
       <label>Cách tính giá vốn</label>
       <div class="quick-btns">
         <button class="quick-btn xa-ton-btn active" data-xa="inc" onclick="setXaTon('inc',this)">Gộp SKU xả</button>
         <button class="quick-btn xa-ton-btn" data-xa="exc" onclick="setXaTon('exc',this)">Không gộp SKU xả</button>
+      </div>
+    </div>
+    <div class="filter-group">
+      <label>Brand</label>
+      <div class="platform-filters" id="brand-filters">
+        <div class="brand-chip lnl active" onclick="toggleBrand('LocknLock',this)"><span class="dot" style="background:#378ADD"></span> LocknLock</div>
+        <div class="brand-chip elmich active" onclick="toggleBrand('Elmich',this)"><span class="dot" style="background:#6B7A5A"></span> Elmich</div>
+        <div class="brand-chip toky active" onclick="toggleBrand('Tactflow',this)"><span class="dot" style="background:#3AAFA9"></span> Tactflow</div>
+        <div class="brand-chip tefal active" onclick="toggleBrand('Tefal',this)"><span class="dot" style="background:#EB212E"></span> Tefal</div>
+        <div class="brand-chip other active" onclick="toggleBrand('',this)"><span class="dot" style="background:#6b7280"></span> Khác</div>
       </div>
     </div>
   </div>
@@ -176,16 +186,6 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
         <div class="platform-chip" style="--ac:#F08080;--ac-text:#5c1a1a" onclick="togglePlatform('Elmich Shopee',this)"><span class="dot"></span> Elmich Shopee</div>
         <div class="platform-chip" style="--ac:#D94F4F;--ac-text:#fff" onclick="togglePlatform('Elmich TikTok',this)"><span class="dot"></span> Elmich TikTok</div>
         <div class="platform-chip" style="--ac:#7C5CBF;--ac-text:#fff" onclick="togglePlatform('Top Value',this)"><span class="dot"></span> Top Value</div>
-      </div>
-    </div>
-    <div class="filter-group">
-      <label>Brand</label>
-      <div class="platform-filters" id="brand-filters">
-        <div class="brand-chip lnl active" onclick="toggleBrand('LocknLock',this)"><span class="dot" style="background:#378ADD"></span> LocknLock</div>
-        <div class="brand-chip elmich active" onclick="toggleBrand('Elmich',this)"><span class="dot" style="background:#6B7A5A"></span> Elmich</div>
-        <div class="brand-chip toky active" onclick="toggleBrand('Tactflow',this)"><span class="dot" style="background:#3AAFA9"></span> Tactflow</div>
-        <div class="brand-chip tefal active" onclick="toggleBrand('Tefal',this)"><span class="dot" style="background:#EB212E"></span> Tefal</div>
-        <div class="brand-chip other active" onclick="toggleBrand('',this)"><span class="dot" style="background:#6b7280"></span> Khác</div>
       </div>
     </div>
   </div>
